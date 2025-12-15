@@ -1,0 +1,442 @@
+---
+description: Anything related to Sanity usage
+alwaysApply: false
+---
+# App SDK best practices
+
+If you’ve worked with Sanity before, your experience querying the Content Lake is likely grounded in building Server-Side Rendered (SSR) or statically generated front-end applications designed for page load time performance.
+
+Now, with the Sanity App SDK, you can build feature-rich content applications for authoring. However, this requires a different approach: swapping SSR thinking for Single-Page Application (SPA) best practices.
+
+On top of this, if you’re used to writing React applications, some common patterns for building form-based user interfaces are best avoided when working with App SDK.
+
+## What makes a great content application?
+
+Content applications are defined as distinct, new experiences that give authors a focused environment to perform content operations. Instead of digging through a general-purpose CMS interface, authors work in a fit-for-purpose user interface to get the job done.
+
+Content applications developed with the Sanity App SDK should be:
+
+### Real-time
+
+Any number of documents fetched and rendered into the user interface should continue to update as mutations happen to the source documents. Content applications should avoid concepts that handle stale data like "submit," “save” or "lock" buttons.
+
+### Multiplayer
+
+Two authors looking at the same document should be able to continually make and see edits without fear of overwriting one another’s work.
+
+### Fast
+
+Content rendered in the application should be locally cached, updated optimistically, and kept eventually consistent with the Content Lake.
+
+### Accurate
+
+There should never be stale data in an author's browser as they write content, nor after page load when fetched content is rendered. Updates should be written to and received directly from the Content Lake.
+
+### This is all built-in to Sanity App SDK
+
+These are the baseline expectations that Sanity’s engineers have had while developing Sanity Studio since 2017, and they’re now democratized for everyone to take advantage of via React Hooks in the Sanity App SDK.
+
+## Get comfortable with more fetches
+
+If you’ve built an SSR front end with Sanity before (such as in Next.js), you’ve likely created a Sanity Client and fetched all on-page content in a single query like this.
+
+```tsx
+// The SSR way: query and render "event" type documents
+
+import { client } from "../sanity/client";
+
+export async function Page() {
+  const events = await client.fetch(
+    `*[_type == "event"]`
+  );
+
+  return (
+    <ul>
+      {events.map((event) => (
+        <li key={event._id}>{event.title}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+This can work great for SSR apps—where only the initial page load is important—since the grunt work of optimization is done behind the scenes, cached and delivered fast in a static format to your end users. But it falls short of a great SPA experience which may involve querying and editing an evolving number and type of documents, while keeping the user interface up to date in real-time.
+
+### Prefer useDocuments over useQuery to fetch documents
+
+Your natural inclination may be to use the App SDK hooks to recreate the "fetch everything in one query" pattern.
+
+```tsx
+// ❌ Do not simply swap client.fetch for useQuery
+// It's too easy to over-fetch!
+
+import { useQuery } from "@sanity/sdk-react";
+
+export function Page() {
+  const { data: events } = useQuery(
+    `*[_type == "event"]`
+  );
+
+  if (!events) return null;
+
+  return (
+    <ul>
+      {events.map((event) => (
+        <li key={event._id}>{event.title}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+This list of documents will receive real-time updates—an upgrade from `client.fetch`—but may unknowingly fetch 1000’s of documents, each with 100’s of attributes.
+
+> [!WARNING]
+> Keeping raw GROQ queries performant
+> The query in this particular example is problematic for performance. There’s no “array slicing” such as `[0..10]` to reduce the total number of documents returned, and no projection such as `{ title }` to reduce the number of attributes returned. 
+> High performance is built-in when you use hooks like `useDocuments` and `usePaginatedDocuments` to return a filtered list of [document handles](/docs/app-sdk/document-handles), but your implementation will need to be more carefully considered when fetching by GROQ queries with `useQuery`.
+
+`useQuery` exists to fetch content with a GROQ query should you need to—but makes it your responsibility to maintain your application’s performance. One particular example of where this may be useful is when a parent component needs all the details of child documents. 
+
+In most cases, you should prefer `useDocuments` to fetch a list of document handles, and render components that do their own data fetching for more content.
+
+> [!TIP]
+> Document handles provide stable `key` values
+> Among the benefits of fetching for and using [document handles](/docs/app-sdk/document-handles) is that they provide a stable `documentId` attribute which can be used as the `key` value when mapping over the response to render a list. 
+> Stable unique identifiers are preferable to using the index when [rendering lists in a real-time React application](https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key).
+
+Here's an example of fetching and rendering the same documents using the App SDK’s more purpose-built hooks.
+
+```tsx
+// ✅ Fetch and render event type documents the App SDK way
+
+import { Suspense } from "react";
+import {
+  useDocuments,
+  useDocumentProjection,
+  type DocumentHandle,
+} from "@sanity/sdk-react";
+
+// Parent component that queries and renders event documents
+export function EventsList() {
+  const { data: events } = useDocuments({
+    documentType: 'event',
+  });
+
+  if (!events) return null;
+
+  return (
+    <ul>
+      {events.map((event) => (
+        <Suspense key={event.documentId} fallback={<li>Loading...</li>}>
+          <Event {...event} />
+        </Suspense>
+      ))}
+    </ul>
+  );
+}
+
+// Event component now renders the <li> itself
+function Event(props: DocumentHandle) {
+  const { data } = useDocumentProjection({ ...props, projection: `{ title }` });
+
+  if (!data) return null;
+
+  return <li>{data.title}</li>;
+}
+```
+
+This may feel like an anti-pattern if you've been regularly building SSR front-ends—so many fetches! 
+
+Rest assured that in a custom app, this is acceptable and in fact the intended usage pattern. The App SDK will handle concerns around caching and query batch sizing to avoid over-fetching.
+
+**Summary:** Don’t fetch everything at once. First fetch for document handles, then fetch individual documents’ content within dedicated components.
+
+## Apply Suspense boundaries liberally
+
+[Suspense](https://react.dev/reference/react/Suspense) may be an unfamiliar part of the React library to many developers, but it won’t be once you’re familiar with the App SDK. The hooks in the App SDK use Suspense for data fetching—this means that when fetches are in flight, React will navigate up the component “tree” to the nearest Suspense boundary and trigger its `fallback` prop.
+
+```tsx
+// A very simple example of using Suspense
+
+import { useDocuments } from "@sanity/sdk-react"
+import { Stack, Text } from "@sanity/ui"
+import { Suspense } from "react"
+
+// 👇 The `useDocuments` hook in this component returns a promise
+function FeedbackListDocuments() {
+  const { data } = useDocuments({
+    documentType: "feedback",
+  })
+
+  return (
+    <Stack>
+      {data?.map((feedback) => (
+        <Text key={feedback.documentId}>{feedback.documentId}</Text>
+      ))}
+    </Stack>
+  )
+}
+
+// 👇 So the component must be wrapped in Suspense
+// which will render the `fallback` prop until data is loaded
+function FeedbackList() {
+  return (
+    <Suspense fallback={<Text>Loading...</Text>}>
+      <FeedbackListDocuments />
+    </Suspense>
+  )
+}
+```
+
+The `SanityApp` component which wraps Sanity custom applications includes a Suspense boundary itself. So, if you have not put any Suspense boundaries throughout your app, you may constantly see the entire app re-render.
+
+Keep in mind that for a small, simple enough app, you may rarely see a Suspense boundary invoked. For larger applications, or those that use more complex rendering libraries like TanStack Table or a Google Map, you may occasionally see runaway re-renders and wonder why. Suspense is likely why.
+
+See the [App SDK Suspense documentation page](/docs/app-sdk/react-suspense-sdk) for more information.
+
+### Expect re-renders from real-time updates
+
+Because fetches for Sanity content with the App SDK are real-time and kept up to date, you may see re-renders happening when nothing seems to change. 
+
+It may be that a document has been edited—just not in a way that would be rendered in your application. For example: A document rendered by your application may receive edits in Sanity Studio by another editor to fields that your application is not rendering, thus updating the latest edited date on the document and potentially causing a re-render.
+
+Thus, you need to account for changes to content not performed by your application which will impact your application re-rendering.
+
+### Wrap Suspense around the parent, not the child
+
+A component which uses a data fetching hook such as `useDocuments` may trigger the outer Suspense boundary. In the example below, this means React will look **above** this component in the tree.
+
+```tsx
+import { Suspense } from "react"
+import { type DocumentHandle, useDocuments } from "@sanity/sdk-react"
+import { Stack, Button } from "@sanity/ui"
+
+// 👇 This component needs to be wrapped in Suspense
+// because it contains a fetching hook
+export function FeedbackList() {
+  const { data, hasMore, loadMore } = useDocuments({
+    documentType: "feedback",
+  })
+
+  return (
+    <Stack space={2} padding={5}>
+      {data?.map((feedback) => (
+        // 👇 Just like FeedbackItem needs to be wrapped
+        // because it does its own data fetching too
+        <Suspense key={feedback.documentId}>
+          <FeedbackItem {...feedback} />
+        </Suspense>
+      ))}
+    </Stack>
+  )
+}
+```
+
+The child elements are wrapped in Suspense (because they also fetch for data), but if the result of `useDocuments` is being updated, it is **this** parent component which needs to be wrapped in Suspense.
+
+**Summary:** Wrap **every** data-fetching component in Suspense.
+
+### Anticipate and prevent layout shift
+
+"Layout shift" is when an element in an application changes dimensions or location, potentially moving other elements as a result.
+
+A common example is when an image loads, changes size and pushes elements below it further down the web page. This can be a little problematic in web applications, and the effect is exacerbated in real-time applications.
+
+In a real-time application an element which renders content could change dimension without user interaction. Another user may publish a change which adds a value that previously didn't exist, or a string may go from a few words to an entire paragraph. Your application should account for changes—unexpected or otherwise—to any content being fetched and rendered.
+
+### How to prevent layout shift with Suspense  
+
+A Suspense boundary’s `fallback` prop can take a component, not just text. Consider creating a “skeleton” version of the component which has the exact same dimensions as the final component that renders when content has been fetched.
+
+In the example below, the `useNavigateToStudioDocument` hook requires a Suspense boundary. 
+
+```tsx
+import { Suspense } from "react"
+import {
+  type DocumentHandle,
+  useNavigateToStudioDocument,
+} from "@sanity/sdk-react"
+import { Button } from "@sanity/ui"
+
+const BUTTON_TEXT = "Open in Studio"
+
+type OpenInStudioProps = {
+  handle: DocumentHandle
+}
+
+// The exported component, pre-wrapped in Suspense
+export function OpenInStudio({ handle }: OpenInStudioProps) {
+  return (
+    <Suspense fallback={<OpenInStudioFallback />}>
+      <OpenInStudioButton handle={handle} />
+    </Suspense>
+  )
+}
+
+// The fallback component, rendered while the final component is loading
+function OpenInStudioFallback() {
+  return <Button text={BUTTON_TEXT} disabled />
+}
+
+// The final component, rendered after the fallback
+function OpenInStudioButton({ handle }: OpenInStudioProps) {
+  const { navigateToStudioDocument } = useNavigateToStudioDocument(handle)
+
+  return <Button onClick={navigateToStudioDocument} text={BUTTON_TEXT} />
+}
+```
+
+So within the one component, we have: 
+
+- The exported component containing the Suspense boundary, which will render either the fallback or the child component depending on the loading state of the `useNavigateToStudioDocument` hook.
+- A fallback button, disabled, with the same text to fill the same space.
+- The final, active button to be clicked.
+
+**Summary: **Components should not change size or location based on the availability of content or their loading state.
+
+### Components should only have one Suspenseful hook
+
+A good rule to keep in mind is that each component should only have one instance of a hook that fetches content (such as `useDocuments` or `useDocumentProjection`)
+
+```tsx
+// ❌ Don't put multiple fetchers in a single component!
+// Updates to either list of documents will rerender both lists.
+
+import { useDocuments } from "@sanity/sdk-react";
+import { List } from "./List";
+
+export function EventsAndVenues() {
+  const { data: events } = useDocuments({
+    documentType: 'event'
+  });
+
+  const { data: venues } = useDocuments({
+    documentType: 'venue'
+  });
+
+  if (!events || !venues) return null;
+
+  return (
+    <>
+      <List title="Events" items={events} />
+      <List title="Venues" items={venues} />
+    </>
+  );
+}
+```
+
+It’s possible to use multiple fetching hooks in a single component, but any one of these that receive an update will cause React to look up the component tree for a Suspense boundary, putting the entire component (and maybe others) into a loading state.
+
+```tsx
+// ✅ Separate fetchers into their own list components
+
+import { Suspense } from 'react'
+import { useDocuments } from '@sanity/react-sdk'
+import { List } from './List'
+
+// Component that renders two independent document lists
+export function EventsAndVenues() {
+  return (
+    <>
+      <Suspense fallback="Loading events...">
+        <DocumentListSection documentType="event" />
+      </Suspense>
+
+      <Suspense fallback="Loading venues...">
+        <DocumentListSection documentType="venue" />
+      </Suspense>
+    </>
+  )
+}
+
+// Reusable component to fetch and render a list of documents by type
+function DocumentListSection({ documentType }: { documentType: string }) {
+  const { data: items } = useDocuments({ documentType })
+
+  if (!items) return null
+
+  return <List items={items} />
+}
+```
+
+**Summary:** Separate individual fetchers into individual components.
+
+## Read and write state from Content Lake 
+
+Real-time applications require values to be up to date in **all** browsers. Therefore you should always read from and write to Content Lake instead of your local state at all times.
+
+### Antipattern: Local state with controlled inputs with `useEditDocument`
+
+For as long as you’ve been building React applications with hooks, you’ve likely implemented forms with controlled inputs where the `useState` hook stores, writes and renders the value of a field and content is submitted upon completion.
+
+```tsx
+// ❌ Do not copy this code example! 
+// It only writes values to the browser, not the Content Lake
+
+import { useState, FormEvent } from "react";
+import { useEditDocument, type DocumentHandle } from "@sanity/sdk-react";
+
+export function TitleForm(props: DocumentHandle) {
+  const [value, setValue] = useState("");
+  const editTitle = useEditDocument({ ...props, path: "title" });
+
+  // 😱 This edit will only happen on submission
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    editTitle(value);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        // 😱 This value only exists in your browser!
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Enter title"
+      />
+      <button type="submit">Save</button>
+    </form>
+  );
+}
+```
+
+In a real-time application this leads to stale data in an author's browser, and creates scenarios where one author can overwrite another's work unknowingly.
+
+### Correct controlled inputs the App SDK way
+
+Hooks in the App SDK have been written to handle the local-first optimistic edits seen in `useState`, while sending and receiving mutations to the Content Lake behind the scenes. This is why you’ll see `useDocument` and `useEditDocument` combined in a pattern like the one below, to achieve the same effect as demonstrated in the incorrect example above.
+
+```tsx
+// ✅ Read from and write values directly to the document
+
+import { useDocument, useEditDocument, type DocumentHandle } from '@sanity/react-sdk'
+
+export function TitleInput(props: DocumentHandle) {
+  const { data: title } = useDocument({ ...props, path: 'title' })
+  const editTitle = useEditDocument({ ...props, path: 'title' })
+
+  return (
+    <input
+      type="text"
+      value={title ?? ''}
+      onChange={e => editTitle(e.currentTarget.value)}
+      placeholder="Enter title"
+    />
+  )
+}
+```
+
+The behavior of this component works the same as the first one, but in a way that will continue to render from and write changes to the Content Lake.
+
+Most magical of all, if your document is in a published state, the first edit made to any value in the document will invoke a new draft version of the document—something Sanity Studio has always done and is now made easy by App SDK.
+
+Instead of requiring the author to “save” changes when they are done, edits are written directly to a “draft” version document. You can “publish” the draft version of the document with the `useApplyActions` hook—[see the documentation](https://reference.sanity.io/_sanity/sdk-react/exports/useApplyDocumentActions/) for more details.
+
+**Summary:** Avoid creating forms that rely on a user’s local session, and always read from and write to the Content Lake.
+
+## What more would you like to know?
+
+Custom applications and the Sanity App SDK are relatively new parts of the Sanity Content Operating System. As such, these best practices are in their early days too. If you feel there is something architecturally difficult to understand, let us know in the [#app-sdk channel of our community](https://snty.link/community).
+
