@@ -5,6 +5,9 @@ import { client } from "@/sanity/lib/client";
 import {
   AI_CATEGORIES_QUERY,
   AI_SEARCH_VENUES_QUERY,
+  AI_USER_UPCOMING_BOOKINGS_QUERY,
+  AI_USER_ALL_BOOKINGS_QUERY,
+  AI_USER_PAST_BOOKINGS_QUERY,
 } from "@/sanity/lib/queries/ai";
 import { defineQuery } from "next-sanity";
 
@@ -12,7 +15,7 @@ import { defineQuery } from "next-sanity";
 export const searchClasses = tool({
   description:
     "Search for fitness classes by name, category, instructor, or tier level. Use this to help users find classes they're interested in.",
-  parameters: z.object({
+  inputSchema: z.object({
     query: z
       .string()
       .optional()
@@ -70,7 +73,7 @@ export const searchClasses = tool({
 export const getClassSessions = tool({
   description:
     "Get upcoming scheduled sessions for a specific class or activity. Shows dates, times, venues, and availability.",
-  parameters: z.object({
+  inputSchema: z.object({
     className: z
       .string()
       .describe("The name of the class to find sessions for"),
@@ -125,7 +128,7 @@ export const getClassSessions = tool({
 export const searchVenues = tool({
   description:
     "Search for fitness venues/studios by name or city. Returns venue details including address and amenities.",
-  parameters: z.object({
+  inputSchema: z.object({
     name: z.string().optional().describe("Venue name to search for"),
     city: z.string().optional().describe("City to search in"),
   }),
@@ -169,7 +172,7 @@ export const searchVenues = tool({
 export const getCategories = tool({
   description:
     "Get all available fitness class categories. Useful when users want to know what types of classes are offered.",
-  parameters: z.object({}),
+  inputSchema: z.object({}),
   execute: async () => {
     const categories = await client.fetch(AI_CATEGORIES_QUERY);
 
@@ -184,7 +187,7 @@ export const getCategories = tool({
 export const getSubscriptionInfo = tool({
   description:
     "Get information about subscription tiers, pricing, and what classes each tier can access.",
-  parameters: z.object({}),
+  inputSchema: z.object({}),
   execute: async () => {
     return {
       tiers: [
@@ -223,7 +226,7 @@ export const getSubscriptionInfo = tool({
 export const getRecommendations = tool({
   description:
     "Get personalized class recommendations based on user preferences like fitness goals, preferred time of day, or difficulty level.",
-  parameters: z.object({
+  inputSchema: z.object({
     fitnessGoal: z
       .enum(["strength", "flexibility", "cardio", "relaxation", "weight-loss"])
       .optional()
@@ -307,6 +310,80 @@ export const getRecommendations = tool({
   },
 });
 
+// Get user's bookings (upcoming, past, or all)
+export const getUserBookings = tool({
+  description:
+    "Get the current user's bookings. Can filter by upcoming or past bookings. Use this when users ask about their scheduled classes, booking history, or want to know what classes they have coming up. The clerkId is provided in the system context.",
+  inputSchema: z.object({
+    type: z
+      .enum(["upcoming", "past", "all"])
+      .optional()
+      .describe(
+        "Filter bookings: 'upcoming' for future classes, 'past' for completed, 'all' for everything. Defaults to 'upcoming'."
+      ),
+    clerkId: z
+      .string()
+      .describe(
+        "The user's Clerk ID from the system context. Extract this from the system message."
+      ),
+  }),
+  execute: async ({ type = "upcoming", clerkId }) => {
+    if (!clerkId) {
+      return {
+        error: "User not authenticated",
+        count: 0,
+        bookings: [],
+      };
+    }
+
+    const query =
+      type === "past"
+        ? AI_USER_PAST_BOOKINGS_QUERY
+        : type === "all"
+        ? AI_USER_ALL_BOOKINGS_QUERY
+        : AI_USER_UPCOMING_BOOKINGS_QUERY;
+
+    const bookings = await client.fetch(query, { clerkId });
+
+    return {
+      count: bookings.length,
+      type,
+      bookings: bookings.map(
+        (b: {
+          _id: string;
+          status: string;
+          createdAt?: string;
+          attendedAt?: string;
+          classSession?: {
+            _id: string;
+            startTime: string;
+            activity?: {
+              name: string;
+              instructor: string;
+              duration: number;
+            };
+            venue?: {
+              name: string;
+              city: string;
+            };
+          };
+        }) => ({
+          id: b._id,
+          status: b.status,
+          bookedAt: b.createdAt,
+          attendedAt: b.attendedAt,
+          class: b.classSession?.activity?.name,
+          instructor: b.classSession?.activity?.instructor,
+          duration: b.classSession?.activity?.duration,
+          dateTime: b.classSession?.startTime,
+          venue: b.classSession?.venue?.name,
+          city: b.classSession?.venue?.city,
+        })
+      ),
+    };
+  },
+});
+
 // Export all tools
 export const aiTools = {
   searchClasses,
@@ -315,4 +392,5 @@ export const aiTools = {
   getCategories,
   getSubscriptionInfo,
   getRecommendations,
+  getUserBookings,
 };

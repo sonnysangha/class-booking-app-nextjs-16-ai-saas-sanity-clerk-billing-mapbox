@@ -1,7 +1,10 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import { AIAssistant } from "@/components/app/AIAssistant";
 import { OnboardingGuard } from "@/components/app/OnboardingGuard";
 import { AppHeader } from "@/components/app/AppHeader";
+import { ChatStoreProvider } from "@/lib/store/chat-store-provider";
+import { AppShell } from "@/components/app/AppShell";
+import { ChatSheet } from "@/components/app/ChatSheet";
+import { ChatButton } from "@/components/app/ChatButton";
 
 export default function AppLayout({
   children,
@@ -10,11 +13,16 @@ export default function AppLayout({
 }>) {
   return (
     <ClerkProvider>
-      <OnboardingGuard>
-        <AppHeader />
-        {children}
-      </OnboardingGuard>
-      <AIAssistant />
+      <ChatStoreProvider>
+        <AppShell>
+          <OnboardingGuard>
+            <AppHeader />
+            {children}
+          </OnboardingGuard>
+        </AppShell>
+        <ChatButton />
+        <ChatSheet />
+      </ChatStoreProvider>
     </ClerkProvider>
   );
 }

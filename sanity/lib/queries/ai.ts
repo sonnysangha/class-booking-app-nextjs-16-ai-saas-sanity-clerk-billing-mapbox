@@ -58,3 +58,76 @@ export const AI_CATEGORIES_QUERY = defineQuery(`*[
   name,
   description
 }`);
+
+// Get user's upcoming bookings for AI tools
+export const AI_USER_UPCOMING_BOOKINGS_QUERY = defineQuery(`*[
+  _type == "booking"
+  && user->clerkId == $clerkId
+  && status == "confirmed"
+  && classSession->startTime > now()
+] | order(classSession->startTime asc) [0...10] {
+  _id,
+  status,
+  createdAt,
+  classSession->{
+    _id,
+    startTime,
+    activity->{
+      name,
+      instructor,
+      duration
+    },
+    venue->{
+      name,
+      "city": address.city
+    }
+  }
+}`);
+
+// Get user's all bookings (including past) for AI tools
+export const AI_USER_ALL_BOOKINGS_QUERY = defineQuery(`*[
+  _type == "booking"
+  && user->clerkId == $clerkId
+] | order(classSession->startTime desc) [0...15] {
+  _id,
+  status,
+  createdAt,
+  attendedAt,
+  classSession->{
+    _id,
+    startTime,
+    activity->{
+      name,
+      instructor,
+      duration
+    },
+    venue->{
+      name,
+      "city": address.city
+    }
+  }
+}`);
+
+// Get user's past bookings for AI tools
+export const AI_USER_PAST_BOOKINGS_QUERY = defineQuery(`*[
+  _type == "booking"
+  && user->clerkId == $clerkId
+  && (status == "attended" || status == "noShow" || classSession->startTime < now())
+] | order(classSession->startTime desc) [0...10] {
+  _id,
+  status,
+  attendedAt,
+  classSession->{
+    _id,
+    startTime,
+    activity->{
+      name,
+      instructor,
+      duration
+    },
+    venue->{
+      name,
+      "city": address.city
+    }
+  }
+}`);
