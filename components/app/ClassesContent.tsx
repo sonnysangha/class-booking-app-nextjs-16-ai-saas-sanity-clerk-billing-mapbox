@@ -117,7 +117,7 @@ export function ClassesContent({
   );
 
   return (
-    <>
+    <div className="@container">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Upcoming Classes</h1>
@@ -181,8 +181,8 @@ export function ClassesContent({
             </span>
           </div>
 
-          {/* Sessions Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Sessions Grid - uses container queries for responsive columns */}
+          <div className="grid grid-cols-1 gap-4 @[480px]:grid-cols-2 @[480px]:gap-6 @[800px]:grid-cols-3">
             {sessions.map((session) => (
               <SessionCard
                 key={session._id}
@@ -194,6 +194,6 @@ export function ClassesContent({
           </div>
         </section>
       ))}
-    </>
+    </div>
   );
 }
