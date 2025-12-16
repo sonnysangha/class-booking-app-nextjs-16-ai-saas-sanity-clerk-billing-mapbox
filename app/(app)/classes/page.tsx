@@ -4,42 +4,76 @@ import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { sanityFetch } from "@/sanity/lib/live";
 import {
-  UPCOMING_SESSIONS_QUERY,
+  FILTERED_SESSIONS_QUERY,
   SEARCH_SESSIONS_QUERY,
 } from "@/sanity/lib/queries/sessions";
 import { CATEGORIES_QUERY } from "@/sanity/lib/queries/categories";
+import { VENUE_NAME_BY_ID_QUERY } from "@/sanity/lib/queries/venues";
 import { USER_BOOKED_SESSION_IDS_QUERY } from "@/sanity/lib/queries";
 import { ClassesContent } from "@/components/app/ClassesContent";
 import { ClassesMapSidebar } from "@/components/app/ClassesMapSidebar";
 import { ClassSearch } from "@/components/app/ClassSearch";
+import { ClassesFilters } from "@/components/app/ClassesFilters";
 import { getUserPreferences } from "@/lib/actions/profile";
 import { filterSessionsByDistance } from "@/lib/utils/distance";
 import Link from "next/link";
-import { MapPinIcon, SearchIcon, SlidersHorizontal } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapPinIcon, SearchIcon } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 interface PageProps {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    venue?: string;
+    category?: string;
+    tier?: string;
+  }>;
 }
 
 export default async function ClassesPage({ searchParams }: PageProps) {
-  const { q: searchQuery } = await searchParams;
+  const {
+    q: searchQuery,
+    venue: venueId,
+    category: categoryParam,
+    tier: tierParam,
+  } = await searchParams;
   const { userId } = await auth();
 
-  // Use search query if provided, otherwise fetch all sessions
+  // Parse multi-value filter params (comma-separated)
+  const categoryIds = categoryParam
+    ? categoryParam.split(",").filter(Boolean)
+    : [];
+  const tierLevels = tierParam ? tierParam.split(",").filter(Boolean) : [];
+
+  // Determine which query to use based on search vs filters
   const sessionsQuery = searchQuery
     ? sanityFetch({
         query: SEARCH_SESSIONS_QUERY,
         params: { searchTerm: searchQuery },
       })
-    : sanityFetch({ query: UPCOMING_SESSIONS_QUERY });
+    : sanityFetch({
+        query: FILTERED_SESSIONS_QUERY,
+        params: {
+          venueId: venueId || "",
+          categoryIds,
+          tierLevels,
+        },
+      });
+
+  // Fetch venue name if venue filter is active
+  const venueNameQuery = venueId
+    ? sanityFetch({
+        query: VENUE_NAME_BY_ID_QUERY,
+        params: { venueId },
+      })
+    : Promise.resolve({ data: null });
 
   const [
     sessionsResult,
     categoriesResult,
     userPreferences,
     bookedSessionsResult,
+    venueNameResult,
   ] = await Promise.all([
     sessionsQuery,
     sanityFetch({ query: CATEGORIES_QUERY }),
@@ -50,14 +84,20 @@ export default async function ClassesPage({ searchParams }: PageProps) {
           params: { clerkId: userId },
         })
       : Promise.resolve({ data: [] }),
+    venueNameQuery,
   ]);
 
   const allSessions = sessionsResult.data;
   const categories = categoriesResult.data;
+  const venueName = venueNameResult.data?.name || null;
   // Filter out null values from booked session IDs
   const bookedIds: (string | null)[] = bookedSessionsResult.data || [];
   const filteredBookedIds = bookedIds.filter((id): id is string => id !== null);
   const bookedSessionIds = new Set(filteredBookedIds);
+
+  // Count active filters for badge display
+  const activeFilterCount =
+    (venueId ? 1 : 0) + categoryIds.length + tierLevels.length;
 
   // User preferences are always set via onboarding - redirect if missing
   if (!userPreferences?.location || !userPreferences?.searchRadius) {
@@ -104,30 +144,48 @@ export default async function ClassesPage({ searchParams }: PageProps) {
       {/* Page Header with Gradient */}
       <div className="border-b bg-gradient-to-r from-primary/5 via-background to-primary/5">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            {/* Search Input */}
-            <Suspense
-              fallback={
-                <div className="flex h-11 w-full items-center gap-2 rounded-full border bg-background px-4 sm:max-w-md">
-                  <SearchIcon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Loading search...
-                  </span>
-                </div>
-              }
-            >
-              <ClassSearch className="w-full sm:max-w-md" />
-            </Suspense>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            {/* Search + Filter Button */}
+            <div className="flex items-center gap-3">
+              <Suspense
+                fallback={
+                  <div className="flex h-11 w-full items-center gap-2 rounded-full border bg-background px-4 sm:w-80 lg:w-96">
+                    <SearchIcon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Loading search...
+                    </span>
+                  </div>
+                }
+              >
+                <ClassSearch className="w-full sm:w-80 lg:w-96" />
+              </Suspense>
+
+              {/* Filter Button (mobile/tablet) */}
+              <div className="lg:hidden">
+                <Suspense fallback={null}>
+                  <ClassesFilters
+                    categories={categories}
+                    activeFilters={{
+                      venueId: venueId || null,
+                      venueName,
+                      categoryIds,
+                      tierLevels,
+                    }}
+                    mobileOnly
+                  />
+                </Suspense>
+              </div>
+            </div>
 
             {/* Location info */}
-            <div className="flex items-center gap-3 rounded-full border border-primary/20 bg-primary/5 px-4 py-2.5 transition-colors hover:bg-primary/10">
+            <div className="flex w-full items-center gap-2 overflow-hidden rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 lg:w-auto lg:max-w-md">
               <MapPinIcon className="h-4 w-4 shrink-0 text-primary" />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  Within {searchRadius} km of{" "}
-                  <span className="text-primary">{location.address}</span>
-                </p>
-              </div>
+              <p className="min-w-0 flex-1 truncate text-sm font-medium">
+                <span className="text-muted-foreground">
+                  Within {searchRadius} km of
+                </span>{" "}
+                <span className="text-primary">{location.address}</span>
+              </p>
               <Link
                 href="/profile"
                 className="shrink-0 text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
@@ -156,67 +214,41 @@ export default async function ClassesPage({ searchParams }: PageProps) {
               </Link>
             </div>
           )}
+
+          {/* Active Filters Indicator */}
+          {!searchQuery && activeFilterCount > 0 && (
+            <div className="mt-4 flex items-center gap-2">
+              <Badge variant="secondary" className="gap-1.5">
+                {activeFilterCount}{" "}
+                {activeFilterCount === 1 ? "filter" : "filters"} active
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {sessionsWithDistance.length}{" "}
+                {sessionsWithDistance.length === 1 ? "class" : "classes"} found
+              </span>
+              <Link
+                href="/classes"
+                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                Clear all filters
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex gap-6">
-          {/* Filters Sidebar */}
-          <aside className="hidden w-60 shrink-0 lg:block">
-            <Card className="sticky top-20">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <SlidersHorizontal className="h-4 w-4 text-primary" />
-                  Filters
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Categories */}
-                <div>
-                  <h4 className="mb-3 text-sm font-semibold">Category</h4>
-                  <div className="space-y-2.5">
-                    {categories.map(
-                      (category: { _id: string; name: string | null }) => (
-                        <label
-                          key={category._id}
-                          className="flex items-center gap-2.5 text-sm cursor-pointer group"
-                        >
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-2 border-muted-foreground/30 text-primary focus:ring-primary focus:ring-offset-0"
-                          />
-                          <span className="text-muted-foreground group-hover:text-foreground transition-colors">
-                            {category.name}
-                          </span>
-                        </label>
-                      ),
-                    )}
-                  </div>
-                </div>
-
-                {/* Tier */}
-                <div>
-                  <h4 className="mb-3 text-sm font-semibold">Tier</h4>
-                  <div className="space-y-2.5">
-                    {["Basic", "Performance", "Champion"].map((tier) => (
-                      <label
-                        key={tier}
-                        className="flex items-center gap-2.5 text-sm cursor-pointer group"
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-2 border-muted-foreground/30 text-primary focus:ring-primary focus:ring-offset-0"
-                        />
-                        <span className="text-muted-foreground group-hover:text-foreground transition-colors">
-                          {tier}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
+          {/* Collapsible Filters Sidebar */}
+          <ClassesFilters
+            categories={categories}
+            activeFilters={{
+              venueId: venueId || null,
+              venueName,
+              categoryIds,
+              tierLevels,
+            }}
+          />
 
           {/* Sessions Content */}
           <div className="min-w-0 flex-1">

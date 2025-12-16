@@ -3,6 +3,7 @@ export {
   UPCOMING_SESSIONS_QUERY,
   SESSION_BY_ID_QUERY,
   SESSIONS_BY_ACTIVITY_QUERY,
+  FILTERED_SESSIONS_QUERY,
 } from "./sessions";
 
 // Activities
@@ -15,6 +16,7 @@ export { CATEGORIES_QUERY } from "./categories";
 export {
   VENUES_QUERY,
   VENUE_BY_SLUG_QUERY,
+  VENUE_NAME_BY_ID_QUERY,
   VENUES_WITH_SESSIONS_QUERY,
 } from "./venues";
 

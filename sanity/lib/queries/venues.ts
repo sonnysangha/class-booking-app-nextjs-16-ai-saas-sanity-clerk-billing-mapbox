@@ -28,6 +28,15 @@ export const VENUE_BY_SLUG_QUERY = defineQuery(`*[
   openingHours
 }`);
 
+// Get venue name by ID (for filter display)
+export const VENUE_NAME_BY_ID_QUERY = defineQuery(`*[
+  _type == "venue"
+  && _id == $venueId
+][0]{
+  _id,
+  name
+}`);
+
 // Get venues with upcoming sessions count (for map)
 export const VENUES_WITH_SESSIONS_QUERY = defineQuery(`*[
   _type == "venue"

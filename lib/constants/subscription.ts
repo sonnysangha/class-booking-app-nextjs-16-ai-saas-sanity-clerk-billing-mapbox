@@ -35,6 +35,13 @@ export const TIER_DISPLAY_NAMES: Record<Tier, string> = {
   champion: "Champion",
 };
 
+// Tier options for filter UIs
+export const TIER_OPTIONS = [
+  { value: "basic", label: "Basic" },
+  { value: "performance", label: "Performance" },
+  { value: "champion", label: "Champion" },
+] as const;
+
 // Tier descriptions
 export const TIER_DESCRIPTIONS: Record<Tier, string> = {
   basic: "5 classes per month",

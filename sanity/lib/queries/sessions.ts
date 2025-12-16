@@ -101,6 +101,52 @@ export const SESSIONS_BY_ACTIVITY_QUERY = defineQuery(`*[
   }
 }`);
 
+// Get sessions with optional filters (venue, category, tier)
+// All filters are optional - pass empty string/array to skip that filter
+export const FILTERED_SESSIONS_QUERY = defineQuery(`*[
+  _type == "classSession"
+  && startTime > now()
+  && status == "scheduled"
+  && ($venueId == "" || venue._ref == $venueId)
+  && (count($categoryIds) == 0 || activity->category._ref in $categoryIds)
+  && (count($tierLevels) == 0 || activity->tierLevel in $tierLevels)
+] | order(startTime asc) {
+  _id,
+  startTime,
+  maxCapacity,
+  status,
+  "currentBookings": count(*[
+    _type == "booking" 
+    && classSession._ref == ^._id 
+    && status == "confirmed"
+  ]),
+  activity->{
+    _id,
+    name,
+    slug,
+    instructor,
+    duration,
+    tierLevel,
+    "image": images[0],
+    category->{
+      _id,
+      name,
+      slug
+    }
+  },
+  venue->{
+    _id,
+    name,
+    slug,
+    "city": address.city,
+    address {
+      lat,
+      lng,
+      fullAddress
+    }
+  }
+}`);
+
 // Search sessions by activity name or instructor name
 export const SEARCH_SESSIONS_QUERY = defineQuery(`*[
   _type == "classSession"
