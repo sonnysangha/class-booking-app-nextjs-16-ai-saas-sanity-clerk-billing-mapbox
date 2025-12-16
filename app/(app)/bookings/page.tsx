@@ -105,9 +105,53 @@ export default async function BookingsPage() {
         {/* Attendance Confirmation Alert */}
         <AttendanceAlert bookings={bookings} />
 
+        {/* Calendar View */}
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <Calendar className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold">Calendar View</h2>
+          </div>
+          <BookingsCalendarView bookings={bookings} />
+        </section>
+
+        {/* Upcoming Bookings */}
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold">Upcoming Classes</h2>
+            <Badge variant="secondary" className="ml-2">
+              {upcomingBookings.length}
+            </Badge>
+          </div>
+          {upcomingBookings.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Calendar className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground mb-4">
+                  No upcoming classes
+                </p>
+                <Button asChild>
+                  <Link href="/classes">
+                    Browse classes
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {upcomingBookings.map((booking) => (
+                <BookingCard key={booking._id} booking={booking} showActions />
+              ))}
+            </div>
+          )}
+        </section>
+
         {/* Usage Stats - we dont show this if the user is on the champion tier as they have unlimited classes */}
         {usageStats.tier !== "champion" && (
-          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <Card>
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
@@ -164,50 +208,6 @@ export default async function BookingsPage() {
             </CardContent>
           </Card>
         )}
-
-        {/* Calendar View */}
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <Calendar className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">Calendar View</h2>
-          </div>
-          <BookingsCalendarView bookings={bookings} />
-        </section>
-
-        {/* Upcoming Bookings */}
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">Upcoming Classes</h2>
-            <Badge variant="secondary" className="ml-2">
-              {upcomingBookings.length}
-            </Badge>
-          </div>
-          {upcomingBookings.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Calendar className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground mb-4">
-                  No upcoming classes
-                </p>
-                <Button asChild>
-                  <Link href="/classes">
-                    Browse classes
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {upcomingBookings.map((booking) => (
-                <BookingCard key={booking._id} booking={booking} showActions />
-              ))}
-            </div>
-          )}
-        </section>
 
         {/* Past Bookings */}
         <section>
