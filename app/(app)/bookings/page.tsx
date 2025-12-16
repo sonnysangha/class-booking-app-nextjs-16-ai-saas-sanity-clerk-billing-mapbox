@@ -7,7 +7,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { BookingActions } from "@/components/app/BookingActions";
+import { BookingsCalendarView } from "@/components/app/BookingsCalendarView";
+import { AttendanceAlert } from "@/components/app/AttendanceAlert";
 import { getUsageStats } from "@/lib/subscription";
+import {
+  BOOKING_STATUS_COLORS,
+  getStatusLabel,
+  getEffectiveStatus,
+} from "@/lib/constants/status";
 
 export default async function BookingsPage() {
   const { userId } = await auth();
@@ -21,87 +28,92 @@ export default async function BookingsPage() {
     getUsageStats(userId),
   ]);
 
-  const upcomingBookings = bookings.filter(
-    (b: { status: string; classSession: { startTime: string } }) =>
-      b.status === "confirmed" && !isPast(new Date(b.classSession.startTime)),
-  );
+  // Filter and sort upcoming bookings (earliest first)
+  const upcomingBookings = bookings
+    .filter(
+      (b: { status: string; classSession: { startTime: string } }) =>
+        b.status === "confirmed" && !isPast(new Date(b.classSession.startTime)),
+    )
+    .sort(
+      (
+        a: { classSession: { startTime: string } },
+        b: { classSession: { startTime: string } },
+      ) =>
+        new Date(a.classSession.startTime).getTime() -
+        new Date(b.classSession.startTime).getTime(),
+    );
 
-  const pastBookings = bookings.filter(
-    (b: { status: string; classSession: { startTime: string } }) =>
-      b.status !== "confirmed" || isPast(new Date(b.classSession.startTime)),
-  );
+  // Filter and sort past bookings (most recent first)
+  const pastBookings = bookings
+    .filter(
+      (b: { status: string; classSession: { startTime: string } }) =>
+        b.status !== "confirmed" || isPast(new Date(b.classSession.startTime)),
+    )
+    .sort(
+      (
+        a: { classSession: { startTime: string } },
+        b: { classSession: { startTime: string } },
+      ) =>
+        new Date(b.classSession.startTime).getTime() -
+        new Date(a.classSession.startTime).getTime(),
+    );
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="text-xl font-bold">
-            ClassPass Clone
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link
-              href="/classes"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Classes
-            </Link>
-            <Link
-              href="/map"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Map
-            </Link>
-            <Link href="/bookings" className="text-sm font-medium">
-              My Bookings
-            </Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">My Bookings</h1>
+        <h1 className="mb-8 text-3xl font-bold">My Bookings</h1>
 
-        {/* Usage Stats */}
-        <div className="rounded-lg border p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Monthly Usage</h2>
-          {usageStats.tier ? (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-muted-foreground">
-                  {usageStats.tier.charAt(0).toUpperCase() +
-                    usageStats.tier.slice(1)}{" "}
-                  Tier
-                </span>
-                <span className="font-medium">
-                  {usageStats.limit === Infinity
-                    ? `${usageStats.used} classes used`
-                    : `${usageStats.used} / ${usageStats.limit} classes`}
-                </span>
-              </div>
-              {usageStats.limit !== Infinity && (
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-primary"
-                    style={{
-                      width: `${(usageStats.used / usageStats.limit) * 100}%`,
-                    }}
-                  />
+        {/* Attendance Confirmation Alert */}
+        <AttendanceAlert bookings={bookings} />
+
+        {/* Usage Stats - we dont show this if the user is on the champion tier as they have unlimited classes */}
+        {usageStats.tier !== "champion" && (
+          <div className="rounded-lg border p-6 mb-8">
+            <h2 className="text-lg font-semibold mb-4">Monthly Usage</h2>
+            {usageStats.tier ? (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-muted-foreground">
+                    {usageStats.tier.charAt(0).toUpperCase() +
+                      usageStats.tier.slice(1)}{" "}
+                    Tier
+                  </span>
+                  <span className="font-medium">
+                    {usageStats.limit === Infinity
+                      ? `${usageStats.used} classes used`
+                      : `${usageStats.used} / ${usageStats.limit} classes`}
+                  </span>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-muted-foreground">
-              <p>No active subscription</p>
-              <Link
-                href="/#pricing"
-                className="text-primary hover:underline mt-2 inline-block"
-              >
-                View subscription plans →
-              </Link>
-            </div>
-          )}
-        </div>
+                {usageStats.limit !== Infinity && (
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-primary"
+                      style={{
+                        width: `${(usageStats.used / usageStats.limit) * 100}%`,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-muted-foreground">
+                <p>No active subscription</p>
+                <Link
+                  href="/#pricing"
+                  className="text-primary hover:underline mt-2 inline-block"
+                >
+                  View subscription plans →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Calendar View */}
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">Calendar View</h2>
+          <BookingsCalendarView bookings={bookings} />
+        </section>
 
         {/* Upcoming Bookings */}
         <section className="mb-12">
@@ -185,29 +197,29 @@ function BookingCard({
     sessionStart,
     (booking.classSession.activity.duration || 60) / 60,
   );
-  const attendanceWindowEnd = addHours(sessionEnd, 1);
+  const attendanceWindowEnd = addHours(sessionEnd, 1); // 1 hour after class ends
   const now = new Date();
 
   const canConfirmAttendance =
     booking.status === "confirmed" &&
     isWithinInterval(now, { start: sessionStart, end: attendanceWindowEnd });
 
-  const statusColors: Record<string, string> = {
-    confirmed: "bg-green-100 text-green-800",
-    attended: "bg-blue-100 text-blue-800",
-    cancelled: "bg-gray-100 text-gray-800",
-    noShow: "bg-red-100 text-red-800",
-  };
+  // Get effective status (handles no-show, in-progress states)
+  const effectiveStatus = getEffectiveStatus(
+    booking.status,
+    sessionStart,
+    booking.classSession.activity.duration || 60,
+  );
 
   return (
-    <div className="rounded-lg border p-4 flex gap-4 group hover:border-primary/50 transition-colors">
+    <div className="group flex gap-4 rounded-lg border p-4 transition-colors hover:border-primary/50">
       {/* Clickable area linking to class */}
       <Link
         href={`/classes/${booking.classSession._id}`}
-        className="flex gap-4 flex-1 min-w-0"
+        className="flex min-w-0 flex-1 gap-4"
       >
         {/* Image */}
-        <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted shrink-0">
+        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
           {booking.classSession.activity.image ? (
             <Image
               src={urlFor(booking.classSession.activity.image)
@@ -219,22 +231,22 @@ function BookingCard({
               className="object-cover"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground text-xs">
+            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
               No image
             </div>
           )}
         </div>
 
         {/* Details */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
+            <h3 className="truncate font-semibold transition-colors group-hover:text-primary">
               {booking.classSession.activity.name}
             </h3>
             <span
-              className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${statusColors[booking.status] || statusColors.confirmed}`}
+              className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${BOOKING_STATUS_COLORS[effectiveStatus] || BOOKING_STATUS_COLORS.confirmed}`}
             >
-              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+              {getStatusLabel(effectiveStatus)}
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -252,7 +264,7 @@ function BookingCard({
 
       {/* Actions */}
       {showActions && (
-        <div className="shrink-0 flex flex-col gap-2">
+        <div className="flex shrink-0 flex-col gap-2">
           <BookingActions
             bookingId={booking._id}
             canConfirmAttendance={canConfirmAttendance}

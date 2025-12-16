@@ -33,38 +33,6 @@ export default async function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="text-xl font-bold">
-            ClassPass Clone
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link
-              href="/classes"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Classes
-            </Link>
-            <Link
-              href="/map"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Map
-            </Link>
-            <Link
-              href="/bookings"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              My Bookings
-            </Link>
-            <Link href="/profile" className="text-sm font-medium">
-              Profile
-            </Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8">
         <div className="mx-auto max-w-2xl">
           <h1 className="mb-8 text-3xl font-bold">Profile</h1>

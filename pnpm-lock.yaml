@@ -77,6 +77,9 @@ importers:
       react:
         specifier: 19.2.1
         version: 19.2.1
+      react-day-picker:
+        specifier: ^9.12.0
+        version: 9.12.0(react@19.2.1)
       react-dom:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
@@ -3343,6 +3346,9 @@ packages:
   dataloader@2.2.3:
     resolution: {integrity: sha512-y2krtASINtPFS1rSDjacrFgn1dcUuoREVabwlOGOe4SdxenREqwjwjElAdwvbGM7kgZz9a3KVicWR7vcz8rnzA==}
 
+  date-fns-jalali@4.1.0-0:
+    resolution: {integrity: sha512-hTIP/z+t+qKwBDcmmsnmjWTduxCg+5KfdqWQvb2X/8C9+knYY6epN/pfxdDuyVlSVeFz0sM5eEfwIUQ70U4ckg==}
+
   date-fns@4.1.0:
     resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
 
@@ -4843,6 +4849,12 @@ packages:
     resolution: {integrity: sha512-rRfjYv66HlG8896yPUDONgKzG5BxZD1nV9U6rkm+7VCuvQc903C4MjcoZR4zPw53IKSOX9wMQVpA1IAbRtzQ7w==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
+
+  react-day-picker@9.12.0:
+    resolution: {integrity: sha512-t8OvG/Zrciso5CQJu5b1A7yzEmebvST+S3pOVQJWxwjjVngyG/CA2htN/D15dLI4uTEuLLkbZyS4YYt480FAtA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: '>=16.8.0'
 
   react-dom@19.2.1:
     resolution: {integrity: sha512-ibrK8llX2a4eOskq1mXKu/TGZj9qzomO+sNfO98M6d9zIPOEhlBkMkBUBLd1vgS0gQsLDBzA+8jJBVXDnfHmJg==}
@@ -9403,6 +9415,8 @@ snapshots:
 
   dataloader@2.2.3: {}
 
+  date-fns-jalali@4.1.0-0: {}
+
   date-fns@4.1.0: {}
 
   debounce@1.2.1: {}
@@ -10886,6 +10900,13 @@ snapshots:
 
   react-compiler-runtime@1.0.0(react@19.2.1):
     dependencies:
+      react: 19.2.1
+
+  react-day-picker@9.12.0(react@19.2.1):
+    dependencies:
+      '@date-fns/tz': 1.4.1
+      date-fns: 4.1.0
+      date-fns-jalali: 4.1.0-0
       react: 19.2.1
 
   react-dom@19.2.1(react@19.2.1):

@@ -75,9 +75,11 @@ export function filterVenuesByDistance<
 
 /**
  * Filter sessions by their venue's distance from a user's location.
+ * Sorts by time (primary) then distance (secondary) within each day.
  */
 export function filterSessionsByDistance<
   T extends {
+    startTime: string;
     venue?: { address?: { lat?: number; lng?: number } | null } | null;
   }
 >(
@@ -102,7 +104,13 @@ export function filterSessionsByDistance<
     }
   }
 
-  return results.sort((a, b) => a.distance - b.distance);
+  // Sort by time first, then by distance as tiebreaker
+  return results.sort((a, b) => {
+    const timeA = new Date(a.startTime).getTime();
+    const timeB = new Date(b.startTime).getTime();
+    if (timeA !== timeB) return timeA - timeB;
+    return a.distance - b.distance;
+  });
 }
 
 /**

@@ -1,16 +1,37 @@
+import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { format } from "date-fns";
 import { sanityFetch } from "@/sanity/lib/live";
-import { UPCOMING_SESSIONS_QUERY } from "@/sanity/lib/queries/sessions";
+import {
+  UPCOMING_SESSIONS_QUERY,
+  SEARCH_SESSIONS_QUERY,
+} from "@/sanity/lib/queries/sessions";
 import { CATEGORIES_QUERY } from "@/sanity/lib/queries/categories";
 import { USER_BOOKED_SESSION_IDS_QUERY } from "@/sanity/lib/queries";
-import { SessionCard } from "@/components/app/SessionCard";
+import { ClassesContent } from "@/components/app/ClassesContent";
+import { ClassesMapSidebar } from "@/components/app/ClassesMapSidebar";
+import { ClassSearch } from "@/components/app/ClassSearch";
 import { getUserPreferences } from "@/lib/actions/profile";
-import { calculateDistance, formatDistance } from "@/lib/utils/distance";
+import { filterSessionsByDistance } from "@/lib/utils/distance";
 import Link from "next/link";
-import { MapPinIcon, AlertCircleIcon } from "lucide-react";
+import { MapPinIcon, SearchIcon } from "lucide-react";
 
-export default async function ClassesPage() {
+interface PageProps {
+  searchParams: Promise<{ q?: string }>;
+}
+
+export default async function ClassesPage({ searchParams }: PageProps) {
+  const { q: searchQuery } = await searchParams;
   const { userId } = await auth();
+
+  // Use search query if provided, otherwise fetch all sessions
+  const sessionsQuery = searchQuery
+    ? sanityFetch({
+        query: SEARCH_SESSIONS_QUERY,
+        params: { searchTerm: searchQuery },
+      })
+    : sanityFetch({ query: UPCOMING_SESSIONS_QUERY });
 
   const [
     sessionsResult,
@@ -18,7 +39,7 @@ export default async function ClassesPage() {
     userPreferences,
     bookedSessionsResult,
   ] = await Promise.all([
-    sanityFetch({ query: UPCOMING_SESSIONS_QUERY }),
+    sessionsQuery,
     sanityFetch({ query: CATEGORIES_QUERY }),
     getUserPreferences(),
     userId
@@ -33,118 +54,101 @@ export default async function ClassesPage() {
   const categories = categoriesResult.data;
   const bookedSessionIds = new Set<string>(bookedSessionsResult.data || []);
 
-  // Filter sessions by user's location if preferences are set
-  type SessionType = (typeof allSessions)[number];
-  type SessionWithDistance = SessionType & { distance?: number };
-
-  let sessions: SessionWithDistance[] = allSessions;
-  let isFiltered = false;
-
-  if (userPreferences?.location && userPreferences?.searchRadius) {
-    const { lat: userLat, lng: userLng } = userPreferences.location;
-    const radiusKm = userPreferences.searchRadius;
-
-    sessions = allSessions
-      .map((session: SessionType): SessionWithDistance => {
-        const venueLat = session.venue?.address?.lat;
-        const venueLng = session.venue?.address?.lng;
-
-        if (venueLat === undefined || venueLng === undefined) {
-          return { ...session, distance: undefined };
-        }
-
-        return {
-          ...session,
-          distance: calculateDistance(userLat, userLng, venueLat, venueLng),
-        };
-      })
-      .filter((session: SessionWithDistance) => {
-        if (session.distance === undefined) return false;
-        return session.distance <= radiusKm;
-      })
-      .sort(
-        (a: SessionWithDistance, b: SessionWithDistance) =>
-          (a.distance ?? 0) - (b.distance ?? 0),
-      );
-
-    isFiltered = true;
+  // User preferences are always set via onboarding - redirect if missing
+  if (!userPreferences?.location || !userPreferences?.searchRadius) {
+    redirect("/onboarding");
   }
+
+  type SessionType = (typeof allSessions)[number];
+  type SessionWithDistance = SessionType & { distance: number };
+
+  const { location, searchRadius } = userPreferences;
+
+  // Get sessions within user's preferred radius, sorted by distance
+  const sessions = filterSessionsByDistance(
+    allSessions,
+    location.lat,
+    location.lng,
+    searchRadius,
+  ) as SessionWithDistance[];
+
+  // Group sessions by day (already sorted by time from GROQ)
+  const groupedByDay = new Map<string, SessionWithDistance[]>();
+  for (const session of sessions) {
+    const dateKey = format(new Date(session.startTime), "yyyy-MM-dd");
+    const existing = groupedByDay.get(dateKey) || [];
+    groupedByDay.set(dateKey, [...existing, session]);
+  }
+
+  const groupedArray = Array.from(groupedByDay.entries());
+
+  // Extract venues for map display
+  const venuesForMap = sessions
+    .filter((s) => s.venue)
+    .map((s) => ({
+      _id: s.venue._id,
+      name: s.venue.name,
+      city: s.venue.city,
+      address: s.venue.address,
+    }));
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="text-xl font-bold">
-            ClassPass Clone
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link href="/classes" className="text-sm font-medium">
-              Classes
-            </Link>
-            <Link
-              href="/map"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Map
-            </Link>
-            <Link
-              href="/bookings"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              My Bookings
-            </Link>
-            <Link
-              href="/profile"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Profile
-            </Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8">
-        {/* Location info banner */}
-        {isFiltered && userPreferences && (
-          <div className="mb-6 flex items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-900 dark:bg-violet-950">
-            <div className="flex items-center gap-3">
-              <MapPinIcon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-              <div>
-                <p className="text-sm font-medium text-violet-800 dark:text-violet-200">
-                  Showing classes within {userPreferences.searchRadius} km
-                </p>
-                <p className="text-xs text-violet-600 dark:text-violet-400">
-                  {userPreferences.location.address}
-                </p>
+        {/* Search and Location Banner */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Search Input */}
+          <Suspense
+            fallback={
+              <div className="flex h-10 w-full items-center gap-2 rounded-lg border bg-background px-3 sm:max-w-md">
+                <SearchIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  Loading search...
+                </span>
               </div>
+            }
+          >
+            <ClassSearch className="w-full sm:max-w-md" />
+          </Suspense>
+
+          {/* Location info */}
+          <div className="flex items-center gap-3 rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 dark:border-violet-900 dark:bg-violet-950">
+            <MapPinIcon className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-violet-800 dark:text-violet-200">
+                Within {searchRadius} km of {location.address}
+              </p>
             </div>
             <Link
               href="/profile"
-              className="text-sm font-medium text-violet-700 hover:text-violet-800 dark:text-violet-300"
+              className="shrink-0 text-sm font-medium text-violet-700 hover:text-violet-800 dark:text-violet-300"
             >
               Change
             </Link>
           </div>
-        )}
+        </div>
 
-        {!userPreferences && (
-          <div className="mb-6 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950">
-            <AlertCircleIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              Set your location in{" "}
-              <Link href="/profile" className="font-medium underline">
-                your profile
-              </Link>{" "}
-              to see classes near you.
-            </p>
+        {/* Search Results Indicator */}
+        {searchQuery && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <SearchIcon className="h-4 w-4" />
+            <span>
+              Showing results for &quot;{searchQuery}&quot; ({sessions.length}{" "}
+              {sessions.length === 1 ? "class" : "classes"})
+            </span>
+            <Link
+              href="/classes"
+              className="ml-2 text-violet-600 hover:text-violet-700"
+            >
+              Clear search
+            </Link>
           </div>
         )}
 
-        <div className="flex flex-col gap-6 md:flex-row">
+        <div className="flex gap-6">
           {/* Filters Sidebar */}
-          <aside className="w-full shrink-0 md:w-64">
-            <div className="sticky top-4 rounded-lg border p-4">
+          <aside className="hidden w-56 shrink-0 lg:block">
+            <div className="sticky top-20 rounded-lg border p-4">
               <h3 className="mb-4 font-semibold">Filters</h3>
 
               {/* Categories */}
@@ -186,50 +190,23 @@ export default async function ClassesPage() {
             </div>
           </aside>
 
-          {/* Sessions Grid */}
-          <div className="flex-1">
-            <div className="mb-6 flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Upcoming Classes</h1>
-              <p className="text-muted-foreground">
-                {sessions.length} classes{isFiltered ? " nearby" : " available"}
-              </p>
-            </div>
-
-            {sessions.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground">
-                <p>
-                  No upcoming classes found{isFiltered ? " in your area" : ""}.
-                </p>
-                <p className="mt-2 text-sm">
-                  {isFiltered
-                    ? "Try increasing your search radius in your profile."
-                    : "Check back later or adjust your filters."}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {sessions.map(
-                  (
-                    session: Parameters<typeof SessionCard>[0]["session"] & {
-                      distance?: number;
-                    },
-                  ) => (
-                    <div key={session._id} className="relative">
-                      <SessionCard
-                        session={session}
-                        isBooked={bookedSessionIds.has(session._id)}
-                      />
-                      {isFiltered && session.distance !== undefined && (
-                        <div className="absolute bottom-20 right-2 rounded-full bg-white/90 px-2 py-1 text-xs font-medium shadow backdrop-blur dark:bg-black/80">
-                          {formatDistance(session.distance)}
-                        </div>
-                      )}
-                    </div>
-                  ),
-                )}
-              </div>
-            )}
+          {/* Sessions Content */}
+          <div className="min-w-0 flex-1">
+            <ClassesContent
+              groupedSessions={groupedArray}
+              bookedSessionIds={Array.from(bookedSessionIds)}
+            />
           </div>
+
+          {/* Map Sidebar - Hidden on mobile/tablet, visible on xl screens */}
+          <aside className="hidden w-[400px] shrink-0 xl:block">
+            <div className="sticky top-20 h-[calc(100vh-8rem)] overflow-hidden rounded-lg border">
+              <ClassesMapSidebar
+                venues={venuesForMap}
+                userLocation={{ lat: location.lat, lng: location.lng }}
+              />
+            </div>
+          </aside>
         </div>
       </main>
     </div>

@@ -1,27 +1,6 @@
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
-
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <h1 className="text-xl font-bold">ClassPass Clone</h1>
-          <div className="flex items-center gap-4">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                  Sign In
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center">

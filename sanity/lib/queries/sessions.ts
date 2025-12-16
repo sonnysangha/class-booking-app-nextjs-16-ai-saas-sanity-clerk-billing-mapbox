@@ -100,3 +100,44 @@ export const SESSIONS_BY_ACTIVITY_QUERY = defineQuery(`*[
     "city": address.city
   }
 }`);
+
+// Search sessions by activity name or instructor name
+export const SEARCH_SESSIONS_QUERY = defineQuery(`*[
+  _type == "classSession"
+  && startTime > now()
+  && status == "scheduled"
+  && (
+    activity->name match $searchTerm + "*"
+    || activity->instructor match $searchTerm + "*"
+  )
+] | order(startTime asc) {
+  _id,
+  startTime,
+  maxCapacity,
+  status,
+  "currentBookings": count(*[
+    _type == "booking" 
+    && classSession._ref == ^._id 
+    && status == "confirmed"
+  ]),
+  activity->{
+    _id,
+    name,
+    slug,
+    instructor,
+    duration,
+    tierLevel,
+    "image": images[0]
+  },
+  venue->{
+    _id,
+    name,
+    slug,
+    "city": address.city,
+    address {
+      lat,
+      lng,
+      fullAddress
+    }
+  }
+}`);

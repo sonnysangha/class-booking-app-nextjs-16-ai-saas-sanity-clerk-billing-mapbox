@@ -1,6 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { AIAssistant } from "@/components/app/AIAssistant";
 import { OnboardingGuard } from "@/components/app/OnboardingGuard";
+import { AppHeader } from "@/components/app/AppHeader";
 
 export default function AppLayout({
   children,
@@ -9,7 +10,10 @@ export default function AppLayout({
 }>) {
   return (
     <ClerkProvider>
-      <OnboardingGuard>{children}</OnboardingGuard>
+      <OnboardingGuard>
+        <AppHeader />
+        {children}
+      </OnboardingGuard>
       <AIAssistant />
     </ClerkProvider>
   );

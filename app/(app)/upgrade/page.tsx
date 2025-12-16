@@ -19,29 +19,6 @@ export default async function UpgradePage({ searchParams }: PageProps) {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      {/* Header */}
-      <header className="border-b border-zinc-800">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="text-xl font-bold text-white">
-            ClassPass Clone
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link
-              href="/classes"
-              className="text-sm font-medium text-zinc-400 hover:text-white transition-colors"
-            >
-              Classes
-            </Link>
-            <Link
-              href="/bookings"
-              className="text-sm font-medium text-zinc-400 hover:text-white transition-colors"
-            >
-              My Bookings
-            </Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-12">
         {/* Hero Section */}
         <div className="text-center mb-12">
