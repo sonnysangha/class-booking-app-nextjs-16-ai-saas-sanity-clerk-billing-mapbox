@@ -64,7 +64,11 @@ export function BookingsCalendar({
         onSelect={(date) => date && onDateSelect(date)}
         month={month}
         onMonthChange={setMonth}
-        className="w-full [--cell-size:--spacing(12)]"
+        className="w-full [--cell-size:--spacing(10)] sm:[--cell-size:--spacing(12)]"
+        classNames={{
+          // Override default today styling on cell - we handle it in DayButton
+          today: "",
+        }}
         modifiers={{
           hasBooking: (date) => hasBookings(date),
         }}
@@ -75,14 +79,15 @@ export function BookingsCalendar({
           DayButton: ({ day, modifiers, className: _className, ...props }) => {
             const bookingCount = getBookingCount(day.date);
             const isSelected = modifiers.selected === true;
+            const isToday = modifiers.today === true;
 
             return (
               <button
                 type="button"
                 {...props}
                 className={cn(
-                  "relative flex h-12 w-12 flex-col items-center justify-center rounded-lg text-sm font-medium transition-all hover:bg-accent",
-                  modifiers.today &&
+                  "relative flex size-(--cell-size) flex-col items-center justify-center rounded-lg text-sm font-medium transition-all hover:bg-accent",
+                  isToday &&
                     !isSelected &&
                     "bg-accent text-accent-foreground font-bold",
                   modifiers.outside && "text-muted-foreground opacity-50",
@@ -92,14 +97,14 @@ export function BookingsCalendar({
               >
                 <span>{day.date.getDate()}</span>
                 {bookingCount > 0 && (
-                  <div className="absolute bottom-1 flex gap-0.5">
+                  <div className="absolute bottom-0.5 flex gap-0.5">
                     {Array.from({
                       length: Math.min(bookingCount, 3),
                     }).map((_, i) => (
                       <div
                         key={`dot-${day.date.getTime()}-${i}`}
                         className={cn(
-                          "h-1.5 w-1.5 rounded-full",
+                          "size-1 rounded-full",
                           isSelected ? "bg-white" : "bg-violet-500",
                         )}
                       />
