@@ -33,16 +33,14 @@ export function RadiusSelector({
             className={cn(
               "relative flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all",
               isSelected
-                ? "border-violet-500 bg-violet-50 dark:bg-violet-950"
-                : "border-border hover:border-violet-300 hover:bg-accent",
+                ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
+                : "border-border hover:border-primary/50 hover:bg-accent",
             )}
           >
             <span
               className={cn(
                 "text-2xl font-bold",
-                isSelected
-                  ? "text-violet-600 dark:text-violet-400"
-                  : "text-foreground",
+                isSelected ? "text-primary" : "text-foreground",
               )}
             >
               {option.label}
@@ -50,16 +48,14 @@ export function RadiusSelector({
             <span
               className={cn(
                 "mt-1 text-xs",
-                isSelected
-                  ? "text-violet-600 dark:text-violet-400"
-                  : "text-muted-foreground",
+                isSelected ? "text-primary" : "text-muted-foreground",
               )}
             >
               {option.description}
             </span>
             {isSelected && (
-              <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-violet-500">
-                <CheckIcon className="h-3 w-3 text-white" strokeWidth={3} />
+              <div className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary shadow-lg">
+                <CheckIcon className="h-3.5 w-3.5 text-primary-foreground" strokeWidth={3} />
               </div>
             )}
           </button>

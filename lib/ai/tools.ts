@@ -4,8 +4,8 @@ import { z } from "zod";
 import { client } from "@/sanity/lib/client";
 import {
   AI_CATEGORIES_QUERY,
-  AI_VENUES_QUERY,
-} from "@/sanity/lib/queries/server";
+  AI_SEARCH_VENUES_QUERY,
+} from "@/sanity/lib/queries/ai";
 import { defineQuery } from "next-sanity";
 
 // Search for classes by name, category, or instructor
@@ -132,7 +132,7 @@ export const searchVenues = tool({
   execute: async ({ name, city }) => {
     // If no filters, use the centralized query
     if (!name && !city) {
-      const venues = await client.fetch(AI_VENUES_QUERY);
+      const venues = await client.fetch(AI_SEARCH_VENUES_QUERY);
       return {
         count: venues.length,
         venues,

@@ -5,6 +5,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBooking, cancelBooking } from "@/lib/actions/bookings";
 import Link from "next/link";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Tier } from "@/lib/constants";
 import { TIER_HIERARCHY, TIER_DISPLAY_NAMES } from "@/lib/constants";
 
@@ -71,37 +73,42 @@ export function BookingButton({
 
   if (!isLoaded) {
     return (
-      <button
-        type="button"
-        disabled
-        className="w-full rounded-md bg-muted py-3 text-sm font-medium"
-      >
+      <Button disabled className="w-full h-12">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         Loading...
-      </button>
+      </Button>
     );
   }
 
   // User already has a booking for this session
   if (existingBookingId && !isCancelled) {
     return (
-      <div>
-        <div className="w-full rounded-md bg-green-100 py-3 text-sm font-medium text-green-800 text-center mb-3">
-          ✓ You&apos;re Booked!
+      <div className="space-y-3">
+        <div className="w-full rounded-xl bg-primary/10 py-3 text-sm font-semibold text-primary text-center flex items-center justify-center gap-2">
+          <CheckCircle className="h-4 w-4" />
+          You&apos;re Booked!
         </div>
-        <button
-          type="button"
+        <Button
+          variant="outline"
           onClick={handleCancel}
           disabled={isPending}
-          className="w-full rounded-md border border-red-300 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+          className="w-full h-10 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
         >
-          {isPending ? "Cancelling..." : "Cancel Booking"}
-        </button>
+          {isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Cancelling...
+            </>
+          ) : (
+            "Cancel Booking"
+          )}
+        </Button>
         {error && (
-          <p className="mt-2 text-sm text-red-600 text-center">{error}</p>
+          <p className="text-sm text-destructive text-center">{error}</p>
         )}
         <Link
           href="/bookings"
-          className="block mt-3 text-center text-sm text-muted-foreground hover:text-foreground"
+          className="block text-center text-sm text-muted-foreground hover:text-primary transition-colors"
         >
           View My Bookings →
         </Link>
@@ -111,25 +118,16 @@ export function BookingButton({
 
   if (isFullyBooked) {
     return (
-      <button
-        type="button"
-        disabled
-        className="w-full rounded-md bg-muted py-3 text-sm font-medium text-muted-foreground"
-      >
+      <Button disabled className="w-full h-12">
         Class is Full
-      </button>
+      </Button>
     );
   }
 
   if (!isSignedIn) {
     return (
       <SignInButton mode="modal">
-        <button
-          type="button"
-          className="w-full rounded-md bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Sign in to Book
-        </button>
+        <Button className="w-full h-12">Sign in to Book</Button>
       </SignInButton>
     );
   }
@@ -137,14 +135,13 @@ export function BookingButton({
   // User is signed in but doesn't have a subscription
   if (userTier === null) {
     return (
-      <div>
-        <Link
-          href={`/upgrade?required=${tierLevel}&sessionId=${sessionId}`}
-          className="block w-full rounded-md bg-linear-to-r from-violet-600 to-purple-600 py-3 text-sm font-medium text-white text-center hover:from-violet-700 hover:to-purple-700 transition-all"
-        >
-          Subscribe to Book
-        </Link>
-        <p className="mt-2 text-xs text-center text-muted-foreground">
+      <div className="space-y-2">
+        <Button asChild className="w-full h-12">
+          <Link href={`/upgrade?required=${tierLevel}&sessionId=${sessionId}`}>
+            Subscribe to Book
+          </Link>
+        </Button>
+        <p className="text-xs text-center text-muted-foreground">
           Choose a plan to start booking classes
         </p>
       </div>
@@ -154,14 +151,16 @@ export function BookingButton({
   // User has a subscription but tier is too low
   if (!canAccess) {
     return (
-      <div>
-        <Link
-          href={`/upgrade?required=${tierLevel}&sessionId=${sessionId}`}
-          className="block w-full rounded-md bg-linear-to-r from-amber-500 to-orange-500 py-3 text-sm font-medium text-white text-center hover:from-amber-600 hover:to-orange-600 transition-all"
+      <div className="space-y-2">
+        <Button
+          asChild
+          className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
         >
-          Upgrade to Book
-        </Link>
-        <p className="mt-2 text-xs text-center text-muted-foreground">
+          <Link href={`/upgrade?required=${tierLevel}&sessionId=${sessionId}`}>
+            Upgrade to Book
+          </Link>
+        </Button>
+        <p className="text-xs text-center text-muted-foreground">
           Requires {requiredTierName} tier or higher
         </p>
       </div>
@@ -170,18 +169,18 @@ export function BookingButton({
 
   // User can book this class
   return (
-    <div>
-      <button
-        type="button"
-        onClick={handleBook}
-        disabled={isPending}
-        className="w-full rounded-md bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
-        {isPending ? "Hold on a sec..." : "Book This Class"}
-      </button>
-      {error && (
-        <p className="mt-2 text-sm text-red-600 text-center">{error}</p>
-      )}
+    <div className="space-y-2">
+      <Button onClick={handleBook} disabled={isPending} className="w-full h-12">
+        {isPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Booking...
+          </>
+        ) : (
+          "Book This Class"
+        )}
+      </Button>
+      {error && <p className="text-sm text-destructive text-center">{error}</p>}
     </div>
   );
 }

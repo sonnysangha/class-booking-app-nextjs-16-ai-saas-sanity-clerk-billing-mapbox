@@ -19,8 +19,12 @@ export type Booking = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  clerkUserId?: string;
-  userEmail?: string;
+  user?: {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "userProfile";
+  };
   classSession?: {
     _ref: string;
     _type: "reference";
@@ -104,7 +108,6 @@ export type Activity = {
   }>;
   duration?: number;
   tierLevel?: "basic" | "performance" | "champion";
-  price?: number;
   aiKeywords?: Array<string>;
 };
 
@@ -170,8 +173,9 @@ export type Venue = {
     city?: string;
     postcode?: string;
     country?: string;
+    lat?: number;
+    lng?: number;
   };
-  location?: Geopoint;
   amenities?: Array<string>;
   openingHours?: Array<{
     day?: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
@@ -181,11 +185,25 @@ export type Venue = {
   }>;
 };
 
-export type Geopoint = {
-  _type: "geopoint";
-  lat?: number;
-  lng?: number;
-  alt?: number;
+export type UserProfile = {
+  _id: string;
+  _type: "userProfile";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  clerkId?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  imageUrl?: string;
+  subscriptionTier?: "none" | "basic" | "performance" | "champion";
+  location?: {
+    lat?: number;
+    lng?: number;
+    address?: string;
+  };
+  searchRadius?: 5 | 10 | 25 | 50;
+  createdAt?: string;
 };
 
 export type SanityImagePaletteSwatch = {
@@ -277,11 +295,334 @@ export type SanityImageAsset = {
   source?: SanityAssetSourceData;
 };
 
-export type AllSanitySchemaTypes = Booking | ClassSession | Activity | SanityImageCrop | SanityImageHotspot | Slug | Category | Venue | Geopoint | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset;
+export type Geopoint = {
+  _type: "geopoint";
+  lat?: number;
+  lng?: number;
+  alt?: number;
+};
+
+export type AllSanitySchemaTypes = Booking | ClassSession | Activity | SanityImageCrop | SanityImageHotspot | Slug | Category | Venue | UserProfile | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
 export declare const internalGroqTypeReferenceTo: unique symbol;
-// Source: ./sanity/lib/queries.ts
+// Source: ./sanity/lib/queries/activities.ts
+// Variable: ACTIVITIES_QUERY
+// Query: *[  _type == "activity"] | order(name asc) {  _id,  name,  slug,  instructor,  duration,  tierLevel,  "image": images[0],  category->{    _id,    name,    slug  }}
+export type ACTIVITIES_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  slug: Slug | null;
+  instructor: string | null;
+  duration: number | null;
+  tierLevel: "basic" | "champion" | "performance" | null;
+  image: {
+    asset?: {
+      _ref: string;
+      _type: "reference";
+      _weak?: boolean;
+      [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
+    };
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    _type: "image";
+    _key: string;
+  } | null;
+  category: {
+    _id: string;
+    name: string | null;
+    slug: Slug | null;
+  } | null;
+}>;
+// Variable: ACTIVITY_BY_SLUG_QUERY
+// Query: *[  _type == "activity"  && slug.current == $slug][0]{  _id,  name,  slug,  instructor,  duration,  tierLevel,  description,  images,  price,  aiKeywords,  category->{    _id,    name,    slug  }}
+export type ACTIVITY_BY_SLUG_QUERYResult = {
+  _id: string;
+  name: string | null;
+  slug: Slug | null;
+  instructor: string | null;
+  duration: number | null;
+  tierLevel: "basic" | "champion" | "performance" | null;
+  description: Array<{
+    children?: Array<{
+      marks?: Array<string>;
+      text?: string;
+      _type: "span";
+      _key: string;
+    }>;
+    style?: "blockquote" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "normal";
+    listItem?: "bullet" | "number";
+    markDefs?: Array<{
+      href?: string;
+      _type: "link";
+      _key: string;
+    }>;
+    level?: number;
+    _type: "block";
+    _key: string;
+  }> | null;
+  images: Array<{
+    asset?: {
+      _ref: string;
+      _type: "reference";
+      _weak?: boolean;
+      [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
+    };
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    _type: "image";
+    _key: string;
+  }> | null;
+  price: null;
+  aiKeywords: Array<string> | null;
+  category: {
+    _id: string;
+    name: string | null;
+    slug: Slug | null;
+  } | null;
+} | null;
+
+// Source: ./sanity/lib/queries/ai.ts
+// Variable: AI_SEARCH_ACTIVITIES_QUERY
+// Query: *[  _type == "activity"] | order(name asc) [0...20] {  _id,  name,  instructor,  duration,  tierLevel,  aiKeywords,  category->{name}}
+export type AI_SEARCH_ACTIVITIES_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  instructor: string | null;
+  duration: number | null;
+  tierLevel: "basic" | "champion" | "performance" | null;
+  aiKeywords: Array<string> | null;
+  category: {
+    name: string | null;
+  } | null;
+}>;
+// Variable: AI_CLASS_SESSIONS_QUERY
+// Query: *[  _type == "classSession"  && startTime > now()  && status == "scheduled"] | order(startTime asc) [0...10] {  _id,  startTime,  maxCapacity,  "currentBookings": count(*[    _type == "booking"    && classSession._ref == ^._id    && status == "confirmed"  ]),  activity->{    name,    instructor,    duration,    tierLevel  },  venue->{    name,    "city": address.city  }}
+export type AI_CLASS_SESSIONS_QUERYResult = Array<{
+  _id: string;
+  startTime: string | null;
+  maxCapacity: number | null;
+  currentBookings: number;
+  activity: {
+    name: string | null;
+    instructor: string | null;
+    duration: number | null;
+    tierLevel: "basic" | "champion" | "performance" | null;
+  } | null;
+  venue: {
+    name: string | null;
+    city: string | null;
+  } | null;
+}>;
+// Variable: AI_SEARCH_VENUES_QUERY
+// Query: *[  _type == "venue"] | order(name asc) [0...10] {  _id,  name,  description,  address,  amenities}
+export type AI_SEARCH_VENUES_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  description: string | null;
+  address: {
+    fullAddress?: string;
+    street?: string;
+    city?: string;
+    postcode?: string;
+    country?: string;
+    lat?: number;
+    lng?: number;
+  } | null;
+  amenities: Array<string> | null;
+}>;
+// Variable: AI_CATEGORIES_QUERY
+// Query: *[  _type == "category"] | order(name asc) {  _id,  name,  description}
+export type AI_CATEGORIES_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  description: string | null;
+}>;
+
+// Source: ./sanity/lib/queries/bookings.ts
+// Variable: USER_BOOKINGS_QUERY
+// Query: *[  _type == "booking"  && user->clerkId == $clerkId] | order(classSession->startTime desc) {  _id,  status,  createdAt,  attendedAt,  cancelledAt,  user->{    _id,    firstName,    lastName,    email  },  classSession->{    _id,    startTime,    activity->{      _id,      name,      slug,      duration,      "image": images[0]    },    venue->{      _id,      name,      "city": address.city    }  }}
+export type USER_BOOKINGS_QUERYResult = Array<{
+  _id: string;
+  status: "attended" | "cancelled" | "confirmed" | "noShow" | null;
+  createdAt: string | null;
+  attendedAt: string | null;
+  cancelledAt: string | null;
+  user: {
+    _id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  } | null;
+  classSession: {
+    _id: string;
+    startTime: string | null;
+    activity: {
+      _id: string;
+      name: string | null;
+      slug: Slug | null;
+      duration: number | null;
+      image: {
+        asset?: {
+          _ref: string;
+          _type: "reference";
+          _weak?: boolean;
+          [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
+        };
+        media?: unknown;
+        hotspot?: SanityImageHotspot;
+        crop?: SanityImageCrop;
+        _type: "image";
+        _key: string;
+      } | null;
+    } | null;
+    venue: {
+      _id: string;
+      name: string | null;
+      city: string | null;
+    } | null;
+  } | null;
+}>;
+// Variable: USER_UPCOMING_BOOKINGS_QUERY
+// Query: *[  _type == "booking"  && user->clerkId == $clerkId  && status == "confirmed"  && classSession->startTime > now()] | order(classSession->startTime asc) {  _id,  status,  createdAt,  classSession->{    _id,    startTime,    activity->{      _id,      name,      slug,      duration,      "image": images[0]    },    venue->{      _id,      name,      "city": address.city    }  }}
+export type USER_UPCOMING_BOOKINGS_QUERYResult = Array<{
+  _id: string;
+  status: "attended" | "cancelled" | "confirmed" | "noShow" | null;
+  createdAt: string | null;
+  classSession: {
+    _id: string;
+    startTime: string | null;
+    activity: {
+      _id: string;
+      name: string | null;
+      slug: Slug | null;
+      duration: number | null;
+      image: {
+        asset?: {
+          _ref: string;
+          _type: "reference";
+          _weak?: boolean;
+          [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
+        };
+        media?: unknown;
+        hotspot?: SanityImageHotspot;
+        crop?: SanityImageCrop;
+        _type: "image";
+        _key: string;
+      } | null;
+    } | null;
+    venue: {
+      _id: string;
+      name: string | null;
+      city: string | null;
+    } | null;
+  } | null;
+}>;
+// Variable: USER_PROFILE_BY_CLERK_ID_QUERY
+// Query: *[  _type == "userProfile"  && clerkId == $clerkId][0]{  _id,  clerkId,  email,  firstName,  lastName,  imageUrl,  subscriptionTier,  createdAt}
+export type USER_PROFILE_BY_CLERK_ID_QUERYResult = {
+  _id: string;
+  clerkId: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  imageUrl: string | null;
+  subscriptionTier: "basic" | "champion" | "none" | "performance" | null;
+  createdAt: string | null;
+} | null;
+// Variable: USER_PROFILE_WITH_PREFERENCES_QUERY
+// Query: *[  _type == "userProfile"  && clerkId == $clerkId][0]{  _id,  firstName,  lastName,  email,  imageUrl,  location,  searchRadius,  subscriptionTier}
+export type USER_PROFILE_WITH_PREFERENCES_QUERYResult = {
+  _id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  imageUrl: string | null;
+  location: {
+    lat?: number;
+    lng?: number;
+    address?: string;
+  } | null;
+  searchRadius: 10 | 25 | 5 | 50 | null;
+  subscriptionTier: "basic" | "champion" | "none" | "performance" | null;
+} | null;
+// Variable: USER_PROFILE_ID_QUERY
+// Query: *[  _type == "userProfile"  && clerkId == $clerkId][0]{ _id }
+export type USER_PROFILE_ID_QUERYResult = {
+  _id: string;
+} | null;
+// Variable: EXISTING_BOOKING_QUERY
+// Query: *[  _type == "booking"   && user._ref == $userProfileId   && classSession._ref == $sessionId  && status in ["confirmed", "attended"]][0]{ _id }
+export type EXISTING_BOOKING_QUERYResult = {
+  _id: string;
+} | null;
+// Variable: SESSION_FOR_BOOKING_QUERY
+// Query: *[  _type == "classSession"  && _id == $sessionId][0]{  _id,  startTime,  maxCapacity,  status,  activity->{    _id,    tierLevel  },  "currentBookings": count(*[    _type == "booking"     && classSession._ref == ^._id     && status == "confirmed"  ])}
+export type SESSION_FOR_BOOKING_QUERYResult = {
+  _id: string;
+  startTime: string | null;
+  maxCapacity: number | null;
+  status: "cancelled" | "completed" | "scheduled" | null;
+  activity: {
+    _id: string;
+    tierLevel: "basic" | "champion" | "performance" | null;
+  } | null;
+  currentBookings: number;
+} | null;
+// Variable: BOOKING_FOR_CANCEL_QUERY
+// Query: *[  _type == "booking"  && _id == $bookingId  && user._ref == $userProfileId][0]{  _id,  status,  classSession->{    startTime  }}
+export type BOOKING_FOR_CANCEL_QUERYResult = {
+  _id: string;
+  status: "attended" | "cancelled" | "confirmed" | "noShow" | null;
+  classSession: {
+    startTime: string | null;
+  } | null;
+} | null;
+// Variable: BOOKING_FOR_ATTENDANCE_QUERY
+// Query: *[  _type == "booking"   && _id == $bookingId   && user._ref == $userProfileId][0]{  _id,  status,  classSession->{    _id,    startTime,    activity->{      duration    }  }}
+export type BOOKING_FOR_ATTENDANCE_QUERYResult = {
+  _id: string;
+  status: "attended" | "cancelled" | "confirmed" | "noShow" | null;
+  classSession: {
+    _id: string;
+    startTime: string | null;
+    activity: {
+      duration: number | null;
+    } | null;
+  } | null;
+} | null;
+// Variable: MONTHLY_BOOKINGS_COUNT_QUERY
+// Query: count(*[  _type == "booking"   && user->clerkId == $userId   && status in ["confirmed", "attended", "noShow"]  && classSession->startTime >= $monthStart  && classSession->startTime < $monthEnd])
+export type MONTHLY_BOOKINGS_COUNT_QUERYResult = number;
+// Variable: USER_SESSION_BOOKING_QUERY
+// Query: *[  _type == "booking"  && user->clerkId == $clerkId  && classSession._ref == $sessionId  && status in ["confirmed", "attended"]][0]{  _id,  status}
+export type USER_SESSION_BOOKING_QUERYResult = {
+  _id: string;
+  status: "attended" | "cancelled" | "confirmed" | "noShow" | null;
+} | null;
+// Variable: CANCELLED_BOOKING_QUERY
+// Query: *[  _type == "booking"  && user._ref == $userProfileId  && classSession._ref == $sessionId  && status == "cancelled"][0]{ _id }
+export type CANCELLED_BOOKING_QUERYResult = {
+  _id: string;
+} | null;
+// Variable: USER_BOOKED_SESSION_IDS_QUERY
+// Query: *[  _type == "booking"  && user->clerkId == $clerkId  && status == "confirmed"  && classSession->startTime > now()].classSession._ref
+export type USER_BOOKED_SESSION_IDS_QUERYResult = Array<string | null>;
+
+// Source: ./sanity/lib/queries/categories.ts
+// Variable: CATEGORIES_QUERY
+// Query: *[  _type == "category"] | order(name asc) {  _id,  name,  slug,  description,  icon}
+export type CATEGORIES_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  slug: Slug | null;
+  description: string | null;
+  icon: string | null;
+}>;
+
+// Source: ./sanity/lib/queries/sessions.ts
 // Variable: UPCOMING_SESSIONS_QUERY
-// Query: *[  _type == "classSession"  && startTime > now()  && status == "scheduled"] | order(startTime asc) {  _id,  startTime,  maxCapacity,  status,  "currentBookings": count(*[    _type == "booking"     && classSession._ref == ^._id     && status == "confirmed"  ]),  activity->{    _id,    name,    slug,    instructor,    duration,    tierLevel,    "image": images[0]  },  venue->{    _id,    name,    slug,    "city": address.city  }}
+// Query: *[  _type == "classSession"  && startTime > now()  && status == "scheduled"] | order(startTime asc) {  _id,  startTime,  maxCapacity,  status,  "currentBookings": count(*[    _type == "booking"     && classSession._ref == ^._id     && status == "confirmed"  ]),  activity->{    _id,    name,    slug,    instructor,    duration,    tierLevel,    "image": images[0]  },  venue->{    _id,    name,    slug,    "city": address.city,    address {      lat,      lng,      fullAddress    }  }}
 export type UPCOMING_SESSIONS_QUERYResult = Array<{
   _id: string;
   startTime: string | null;
@@ -314,10 +655,15 @@ export type UPCOMING_SESSIONS_QUERYResult = Array<{
     name: string | null;
     slug: Slug | null;
     city: string | null;
+    address: {
+      lat: number | null;
+      lng: number | null;
+      fullAddress: string | null;
+    } | null;
   } | null;
 }>;
 // Variable: SESSION_BY_ID_QUERY
-// Query: *[  _type == "classSession"  && _id == $sessionId][0]{  _id,  startTime,  maxCapacity,  status,  "currentBookings": count(*[    _type == "booking"     && classSession._ref == ^._id     && status == "confirmed"  ]),  activity->{    _id,    name,    slug,    instructor,    duration,    tierLevel,    description,    images,    category->{      _id,      name,      slug    }  },  venue->{    _id,    name,    slug,    description,    images,    address,    location,    amenities  }}
+// Query: *[  _type == "classSession"  && _id == $sessionId][0]{  _id,  startTime,  maxCapacity,  status,  "currentBookings": count(*[    _type == "booking"     && classSession._ref == ^._id     && status == "confirmed"  ]),  activity->{    _id,    name,    slug,    instructor,    duration,    tierLevel,    description,    images,    category->{      _id,      name,      slug    }  },  venue->{    _id,    name,    slug,    description,    images,    address,    amenities  }}
 export type SESSION_BY_ID_QUERYResult = {
   _id: string;
   startTime: string | null;
@@ -392,8 +738,9 @@ export type SESSION_BY_ID_QUERYResult = {
       city?: string;
       postcode?: string;
       country?: string;
+      lat?: number;
+      lng?: number;
     } | null;
-    location: Geopoint | null;
     amenities: Array<string> | null;
   } | null;
 } | null;
@@ -412,93 +759,51 @@ export type SESSIONS_BY_ACTIVITY_QUERYResult = Array<{
     city: string | null;
   } | null;
 }>;
-// Variable: ACTIVITIES_QUERY
-// Query: *[  _type == "activity"] | order(name asc) {  _id,  name,  slug,  instructor,  duration,  tierLevel,  "image": images[0],  category->{    _id,    name,    slug  }}
-export type ACTIVITIES_QUERYResult = Array<{
+// Variable: SEARCH_SESSIONS_QUERY
+// Query: *[  _type == "classSession"  && startTime > now()  && status == "scheduled"  && (    activity->name match $searchTerm + "*"    || activity->instructor match $searchTerm + "*"  )] | order(startTime asc) {  _id,  startTime,  maxCapacity,  status,  "currentBookings": count(*[    _type == "booking"     && classSession._ref == ^._id     && status == "confirmed"  ]),  activity->{    _id,    name,    slug,    instructor,    duration,    tierLevel,    "image": images[0]  },  venue->{    _id,    name,    slug,    "city": address.city,    address {      lat,      lng,      fullAddress    }  }}
+export type SEARCH_SESSIONS_QUERYResult = Array<{
   _id: string;
-  name: string | null;
-  slug: Slug | null;
-  instructor: string | null;
-  duration: number | null;
-  tierLevel: "basic" | "champion" | "performance" | null;
-  image: {
-    asset?: {
-      _ref: string;
-      _type: "reference";
-      _weak?: boolean;
-      [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
-    };
-    media?: unknown;
-    hotspot?: SanityImageHotspot;
-    crop?: SanityImageCrop;
-    _type: "image";
-    _key: string;
-  } | null;
-  category: {
+  startTime: string | null;
+  maxCapacity: number | null;
+  status: "cancelled" | "completed" | "scheduled" | null;
+  currentBookings: number;
+  activity: {
     _id: string;
     name: string | null;
     slug: Slug | null;
+    instructor: string | null;
+    duration: number | null;
+    tierLevel: "basic" | "champion" | "performance" | null;
+    image: {
+      asset?: {
+        _ref: string;
+        _type: "reference";
+        _weak?: boolean;
+        [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
+      };
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      _type: "image";
+      _key: string;
+    } | null;
   } | null;
-}>;
-// Variable: ACTIVITY_BY_SLUG_QUERY
-// Query: *[  _type == "activity"  && slug.current == $slug][0]{  _id,  name,  slug,  instructor,  duration,  tierLevel,  description,  images,  price,  aiKeywords,  category->{    _id,    name,    slug  }}
-export type ACTIVITY_BY_SLUG_QUERYResult = {
-  _id: string;
-  name: string | null;
-  slug: Slug | null;
-  instructor: string | null;
-  duration: number | null;
-  tierLevel: "basic" | "champion" | "performance" | null;
-  description: Array<{
-    children?: Array<{
-      marks?: Array<string>;
-      text?: string;
-      _type: "span";
-      _key: string;
-    }>;
-    style?: "blockquote" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "normal";
-    listItem?: "bullet" | "number";
-    markDefs?: Array<{
-      href?: string;
-      _type: "link";
-      _key: string;
-    }>;
-    level?: number;
-    _type: "block";
-    _key: string;
-  }> | null;
-  images: Array<{
-    asset?: {
-      _ref: string;
-      _type: "reference";
-      _weak?: boolean;
-      [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
-    };
-    media?: unknown;
-    hotspot?: SanityImageHotspot;
-    crop?: SanityImageCrop;
-    _type: "image";
-    _key: string;
-  }> | null;
-  price: number | null;
-  aiKeywords: Array<string> | null;
-  category: {
+  venue: {
     _id: string;
     name: string | null;
     slug: Slug | null;
+    city: string | null;
+    address: {
+      lat: number | null;
+      lng: number | null;
+      fullAddress: string | null;
+    } | null;
   } | null;
-} | null;
-// Variable: CATEGORIES_QUERY
-// Query: *[  _type == "category"] | order(name asc) {  _id,  name,  slug,  description,  icon}
-export type CATEGORIES_QUERYResult = Array<{
-  _id: string;
-  name: string | null;
-  slug: Slug | null;
-  description: string | null;
-  icon: string | null;
 }>;
+
+// Source: ./sanity/lib/queries/venues.ts
 // Variable: VENUES_QUERY
-// Query: *[  _type == "venue"] | order(name asc) {  _id,  name,  slug,  description,  "image": images[0],  address,  location,  amenities}
+// Query: *[  _type == "venue"] | order(name asc) {  _id,  name,  slug,  description,  "image": images[0],  address,  amenities}
 export type VENUES_QUERYResult = Array<{
   _id: string;
   name: string | null;
@@ -523,12 +828,13 @@ export type VENUES_QUERYResult = Array<{
     city?: string;
     postcode?: string;
     country?: string;
+    lat?: number;
+    lng?: number;
   } | null;
-  location: Geopoint | null;
   amenities: Array<string> | null;
 }>;
 // Variable: VENUE_BY_SLUG_QUERY
-// Query: *[  _type == "venue"  && slug.current == $slug][0]{  _id,  name,  slug,  description,  images,  address,  location,  amenities,  openingHours}
+// Query: *[  _type == "venue"  && slug.current == $slug][0]{  _id,  name,  slug,  description,  images,  address,  amenities,  openingHours}
 export type VENUE_BY_SLUG_QUERYResult = {
   _id: string;
   name: string | null;
@@ -553,8 +859,9 @@ export type VENUE_BY_SLUG_QUERYResult = {
     city?: string;
     postcode?: string;
     country?: string;
+    lat?: number;
+    lng?: number;
   } | null;
-  location: Geopoint | null;
   amenities: Array<string> | null;
   openingHours: Array<{
     day?: "friday" | "monday" | "saturday" | "sunday" | "thursday" | "tuesday" | "wednesday";
@@ -563,85 +870,18 @@ export type VENUE_BY_SLUG_QUERYResult = {
     _key: string;
   }> | null;
 } | null;
-// Variable: USER_BOOKINGS_QUERY
-// Query: *[  _type == "booking"  && clerkUserId == $userId] | order(classSession->startTime desc) {  _id,  status,  createdAt,  attendedAt,  cancelledAt,  classSession->{    _id,    startTime,    activity->{      _id,      name,      slug,      duration,      "image": images[0]    },    venue->{      _id,      name,      "city": address.city    }  }}
-export type USER_BOOKINGS_QUERYResult = Array<{
-  _id: string;
-  status: "attended" | "cancelled" | "confirmed" | "noShow" | null;
-  createdAt: string | null;
-  attendedAt: string | null;
-  cancelledAt: string | null;
-  classSession: {
-    _id: string;
-    startTime: string | null;
-    activity: {
-      _id: string;
-      name: string | null;
-      slug: Slug | null;
-      duration: number | null;
-      image: {
-        asset?: {
-          _ref: string;
-          _type: "reference";
-          _weak?: boolean;
-          [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
-        };
-        media?: unknown;
-        hotspot?: SanityImageHotspot;
-        crop?: SanityImageCrop;
-        _type: "image";
-        _key: string;
-      } | null;
-    } | null;
-    venue: {
-      _id: string;
-      name: string | null;
-      city: string | null;
-    } | null;
-  } | null;
-}>;
-// Variable: USER_UPCOMING_BOOKINGS_QUERY
-// Query: *[  _type == "booking"  && clerkUserId == $userId  && status == "confirmed"  && classSession->startTime > now()] | order(classSession->startTime asc) {  _id,  status,  createdAt,  classSession->{    _id,    startTime,    activity->{      _id,      name,      slug,      duration,      "image": images[0]    },    venue->{      _id,      name,      "city": address.city    }  }}
-export type USER_UPCOMING_BOOKINGS_QUERYResult = Array<{
-  _id: string;
-  status: "attended" | "cancelled" | "confirmed" | "noShow" | null;
-  createdAt: string | null;
-  classSession: {
-    _id: string;
-    startTime: string | null;
-    activity: {
-      _id: string;
-      name: string | null;
-      slug: Slug | null;
-      duration: number | null;
-      image: {
-        asset?: {
-          _ref: string;
-          _type: "reference";
-          _weak?: boolean;
-          [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
-        };
-        media?: unknown;
-        hotspot?: SanityImageHotspot;
-        crop?: SanityImageCrop;
-        _type: "image";
-        _key: string;
-      } | null;
-    } | null;
-    venue: {
-      _id: string;
-      name: string | null;
-      city: string | null;
-    } | null;
-  } | null;
-}>;
 // Variable: VENUES_WITH_SESSIONS_QUERY
-// Query: *[  _type == "venue"  && count(*[    _type == "classSession"    && venue._ref == ^._id    && startTime > now()    && status == "scheduled"  ]) > 0] {  _id,  name,  slug,  location,  "upcomingSessionsCount": count(*[    _type == "classSession"    && venue._ref == ^._id    && startTime > now()    && status == "scheduled"  ])}
+// Query: *[  _type == "venue"  && count(*[    _type == "classSession"    && venue._ref == ^._id    && startTime > now()    && status == "scheduled"  ]) > 0] {  _id,  name,  slug,  "address": address {    lat,    lng,    fullAddress,    city  },  "upcomingSessionsCount": count(*[    _type == "classSession"    && venue._ref == ^._id    && startTime > now()    && status == "scheduled"  ])}
 export type VENUES_WITH_SESSIONS_QUERYResult = Array<{
   _id: string;
   name: string | null;
   slug: Slug | null;
-  location: Geopoint | null;
+  address: {
+    lat: number | null;
+    lng: number | null;
+    fullAddress: string | null;
+    city: string | null;
+  } | null;
   upcomingSessionsCount: number;
 }>;
 
@@ -649,16 +889,32 @@ export type VENUES_WITH_SESSIONS_QUERYResult = Array<{
 import "@sanity/client";
 declare module "@sanity/client" {
   interface SanityQueries {
-    "*[\n  _type == \"classSession\"\n  && startTime > now()\n  && status == \"scheduled\"\n] | order(startTime asc) {\n  _id,\n  startTime,\n  maxCapacity,\n  status,\n  \"currentBookings\": count(*[\n    _type == \"booking\" \n    && classSession._ref == ^._id \n    && status == \"confirmed\"\n  ]),\n  activity->{\n    _id,\n    name,\n    slug,\n    instructor,\n    duration,\n    tierLevel,\n    \"image\": images[0]\n  },\n  venue->{\n    _id,\n    name,\n    slug,\n    \"city\": address.city\n  }\n}": UPCOMING_SESSIONS_QUERYResult;
-    "*[\n  _type == \"classSession\"\n  && _id == $sessionId\n][0]{\n  _id,\n  startTime,\n  maxCapacity,\n  status,\n  \"currentBookings\": count(*[\n    _type == \"booking\" \n    && classSession._ref == ^._id \n    && status == \"confirmed\"\n  ]),\n  activity->{\n    _id,\n    name,\n    slug,\n    instructor,\n    duration,\n    tierLevel,\n    description,\n    images,\n    category->{\n      _id,\n      name,\n      slug\n    }\n  },\n  venue->{\n    _id,\n    name,\n    slug,\n    description,\n    images,\n    address,\n    location,\n    amenities\n  }\n}": SESSION_BY_ID_QUERYResult;
-    "*[\n  _type == \"classSession\"\n  && activity._ref == $activityId\n  && startTime > now()\n  && status == \"scheduled\"\n] | order(startTime asc) {\n  _id,\n  startTime,\n  maxCapacity,\n  status,\n  \"currentBookings\": count(*[\n    _type == \"booking\" \n    && classSession._ref == ^._id \n    && status == \"confirmed\"\n  ]),\n  venue->{\n    _id,\n    name,\n    slug,\n    \"city\": address.city\n  }\n}": SESSIONS_BY_ACTIVITY_QUERYResult;
     "*[\n  _type == \"activity\"\n] | order(name asc) {\n  _id,\n  name,\n  slug,\n  instructor,\n  duration,\n  tierLevel,\n  \"image\": images[0],\n  category->{\n    _id,\n    name,\n    slug\n  }\n}": ACTIVITIES_QUERYResult;
     "*[\n  _type == \"activity\"\n  && slug.current == $slug\n][0]{\n  _id,\n  name,\n  slug,\n  instructor,\n  duration,\n  tierLevel,\n  description,\n  images,\n  price,\n  aiKeywords,\n  category->{\n    _id,\n    name,\n    slug\n  }\n}": ACTIVITY_BY_SLUG_QUERYResult;
+    "*[\n  _type == \"activity\"\n] | order(name asc) [0...20] {\n  _id,\n  name,\n  instructor,\n  duration,\n  tierLevel,\n  aiKeywords,\n  category->{name}\n}": AI_SEARCH_ACTIVITIES_QUERYResult;
+    "*[\n  _type == \"classSession\"\n  && startTime > now()\n  && status == \"scheduled\"\n] | order(startTime asc) [0...10] {\n  _id,\n  startTime,\n  maxCapacity,\n  \"currentBookings\": count(*[\n    _type == \"booking\"\n    && classSession._ref == ^._id\n    && status == \"confirmed\"\n  ]),\n  activity->{\n    name,\n    instructor,\n    duration,\n    tierLevel\n  },\n  venue->{\n    name,\n    \"city\": address.city\n  }\n}": AI_CLASS_SESSIONS_QUERYResult;
+    "*[\n  _type == \"venue\"\n] | order(name asc) [0...10] {\n  _id,\n  name,\n  description,\n  address,\n  amenities\n}": AI_SEARCH_VENUES_QUERYResult;
+    "*[\n  _type == \"category\"\n] | order(name asc) {\n  _id,\n  name,\n  description\n}": AI_CATEGORIES_QUERYResult;
+    "*[\n  _type == \"booking\"\n  && user->clerkId == $clerkId\n] | order(classSession->startTime desc) {\n  _id,\n  status,\n  createdAt,\n  attendedAt,\n  cancelledAt,\n  user->{\n    _id,\n    firstName,\n    lastName,\n    email\n  },\n  classSession->{\n    _id,\n    startTime,\n    activity->{\n      _id,\n      name,\n      slug,\n      duration,\n      \"image\": images[0]\n    },\n    venue->{\n      _id,\n      name,\n      \"city\": address.city\n    }\n  }\n}": USER_BOOKINGS_QUERYResult;
+    "*[\n  _type == \"booking\"\n  && user->clerkId == $clerkId\n  && status == \"confirmed\"\n  && classSession->startTime > now()\n] | order(classSession->startTime asc) {\n  _id,\n  status,\n  createdAt,\n  classSession->{\n    _id,\n    startTime,\n    activity->{\n      _id,\n      name,\n      slug,\n      duration,\n      \"image\": images[0]\n    },\n    venue->{\n      _id,\n      name,\n      \"city\": address.city\n    }\n  }\n}": USER_UPCOMING_BOOKINGS_QUERYResult;
+    "*[\n  _type == \"userProfile\"\n  && clerkId == $clerkId\n][0]{\n  _id,\n  clerkId,\n  email,\n  firstName,\n  lastName,\n  imageUrl,\n  subscriptionTier,\n  createdAt\n}": USER_PROFILE_BY_CLERK_ID_QUERYResult;
+    "*[\n  _type == \"userProfile\"\n  && clerkId == $clerkId\n][0]{\n  _id,\n  firstName,\n  lastName,\n  email,\n  imageUrl,\n  location,\n  searchRadius,\n  subscriptionTier\n}": USER_PROFILE_WITH_PREFERENCES_QUERYResult;
+    "*[\n  _type == \"userProfile\"\n  && clerkId == $clerkId\n][0]{ _id }": USER_PROFILE_ID_QUERYResult;
+    "*[\n  _type == \"booking\" \n  && user._ref == $userProfileId \n  && classSession._ref == $sessionId\n  && status in [\"confirmed\", \"attended\"]\n][0]{ _id }": EXISTING_BOOKING_QUERYResult;
+    "*[\n  _type == \"classSession\"\n  && _id == $sessionId\n][0]{\n  _id,\n  startTime,\n  maxCapacity,\n  status,\n  activity->{\n    _id,\n    tierLevel\n  },\n  \"currentBookings\": count(*[\n    _type == \"booking\" \n    && classSession._ref == ^._id \n    && status == \"confirmed\"\n  ])\n}": SESSION_FOR_BOOKING_QUERYResult;
+    "*[\n  _type == \"booking\"\n  && _id == $bookingId\n  && user._ref == $userProfileId\n][0]{\n  _id,\n  status,\n  classSession->{\n    startTime\n  }\n}": BOOKING_FOR_CANCEL_QUERYResult;
+    "*[\n  _type == \"booking\" \n  && _id == $bookingId \n  && user._ref == $userProfileId\n][0]{\n  _id,\n  status,\n  classSession->{\n    _id,\n    startTime,\n    activity->{\n      duration\n    }\n  }\n}": BOOKING_FOR_ATTENDANCE_QUERYResult;
+    "count(*[\n  _type == \"booking\" \n  && user->clerkId == $userId \n  && status in [\"confirmed\", \"attended\", \"noShow\"]\n  && classSession->startTime >= $monthStart\n  && classSession->startTime < $monthEnd\n])": MONTHLY_BOOKINGS_COUNT_QUERYResult;
+    "*[\n  _type == \"booking\"\n  && user->clerkId == $clerkId\n  && classSession._ref == $sessionId\n  && status in [\"confirmed\", \"attended\"]\n][0]{\n  _id,\n  status\n}": USER_SESSION_BOOKING_QUERYResult;
+    "*[\n  _type == \"booking\"\n  && user._ref == $userProfileId\n  && classSession._ref == $sessionId\n  && status == \"cancelled\"\n][0]{ _id }": CANCELLED_BOOKING_QUERYResult;
+    "*[\n  _type == \"booking\"\n  && user->clerkId == $clerkId\n  && status == \"confirmed\"\n  && classSession->startTime > now()\n].classSession._ref": USER_BOOKED_SESSION_IDS_QUERYResult;
     "*[\n  _type == \"category\"\n] | order(name asc) {\n  _id,\n  name,\n  slug,\n  description,\n  icon\n}": CATEGORIES_QUERYResult;
-    "*[\n  _type == \"venue\"\n] | order(name asc) {\n  _id,\n  name,\n  slug,\n  description,\n  \"image\": images[0],\n  address,\n  location,\n  amenities\n}": VENUES_QUERYResult;
-    "*[\n  _type == \"venue\"\n  && slug.current == $slug\n][0]{\n  _id,\n  name,\n  slug,\n  description,\n  images,\n  address,\n  location,\n  amenities,\n  openingHours\n}": VENUE_BY_SLUG_QUERYResult;
-    "*[\n  _type == \"booking\"\n  && clerkUserId == $userId\n] | order(classSession->startTime desc) {\n  _id,\n  status,\n  createdAt,\n  attendedAt,\n  cancelledAt,\n  classSession->{\n    _id,\n    startTime,\n    activity->{\n      _id,\n      name,\n      slug,\n      duration,\n      \"image\": images[0]\n    },\n    venue->{\n      _id,\n      name,\n      \"city\": address.city\n    }\n  }\n}": USER_BOOKINGS_QUERYResult;
-    "*[\n  _type == \"booking\"\n  && clerkUserId == $userId\n  && status == \"confirmed\"\n  && classSession->startTime > now()\n] | order(classSession->startTime asc) {\n  _id,\n  status,\n  createdAt,\n  classSession->{\n    _id,\n    startTime,\n    activity->{\n      _id,\n      name,\n      slug,\n      duration,\n      \"image\": images[0]\n    },\n    venue->{\n      _id,\n      name,\n      \"city\": address.city\n    }\n  }\n}": USER_UPCOMING_BOOKINGS_QUERYResult;
-    "*[\n  _type == \"venue\"\n  && count(*[\n    _type == \"classSession\"\n    && venue._ref == ^._id\n    && startTime > now()\n    && status == \"scheduled\"\n  ]) > 0\n] {\n  _id,\n  name,\n  slug,\n  location,\n  \"upcomingSessionsCount\": count(*[\n    _type == \"classSession\"\n    && venue._ref == ^._id\n    && startTime > now()\n    && status == \"scheduled\"\n  ])\n}": VENUES_WITH_SESSIONS_QUERYResult;
+    "*[\n  _type == \"classSession\"\n  && startTime > now()\n  && status == \"scheduled\"\n] | order(startTime asc) {\n  _id,\n  startTime,\n  maxCapacity,\n  status,\n  \"currentBookings\": count(*[\n    _type == \"booking\" \n    && classSession._ref == ^._id \n    && status == \"confirmed\"\n  ]),\n  activity->{\n    _id,\n    name,\n    slug,\n    instructor,\n    duration,\n    tierLevel,\n    \"image\": images[0]\n  },\n  venue->{\n    _id,\n    name,\n    slug,\n    \"city\": address.city,\n    address {\n      lat,\n      lng,\n      fullAddress\n    }\n  }\n}": UPCOMING_SESSIONS_QUERYResult;
+    "*[\n  _type == \"classSession\"\n  && _id == $sessionId\n][0]{\n  _id,\n  startTime,\n  maxCapacity,\n  status,\n  \"currentBookings\": count(*[\n    _type == \"booking\" \n    && classSession._ref == ^._id \n    && status == \"confirmed\"\n  ]),\n  activity->{\n    _id,\n    name,\n    slug,\n    instructor,\n    duration,\n    tierLevel,\n    description,\n    images,\n    category->{\n      _id,\n      name,\n      slug\n    }\n  },\n  venue->{\n    _id,\n    name,\n    slug,\n    description,\n    images,\n    address,\n    amenities\n  }\n}": SESSION_BY_ID_QUERYResult;
+    "*[\n  _type == \"classSession\"\n  && activity._ref == $activityId\n  && startTime > now()\n  && status == \"scheduled\"\n] | order(startTime asc) {\n  _id,\n  startTime,\n  maxCapacity,\n  status,\n  \"currentBookings\": count(*[\n    _type == \"booking\" \n    && classSession._ref == ^._id \n    && status == \"confirmed\"\n  ]),\n  venue->{\n    _id,\n    name,\n    slug,\n    \"city\": address.city\n  }\n}": SESSIONS_BY_ACTIVITY_QUERYResult;
+    "*[\n  _type == \"classSession\"\n  && startTime > now()\n  && status == \"scheduled\"\n  && (\n    activity->name match $searchTerm + \"*\"\n    || activity->instructor match $searchTerm + \"*\"\n  )\n] | order(startTime asc) {\n  _id,\n  startTime,\n  maxCapacity,\n  status,\n  \"currentBookings\": count(*[\n    _type == \"booking\" \n    && classSession._ref == ^._id \n    && status == \"confirmed\"\n  ]),\n  activity->{\n    _id,\n    name,\n    slug,\n    instructor,\n    duration,\n    tierLevel,\n    \"image\": images[0]\n  },\n  venue->{\n    _id,\n    name,\n    slug,\n    \"city\": address.city,\n    address {\n      lat,\n      lng,\n      fullAddress\n    }\n  }\n}": SEARCH_SESSIONS_QUERYResult;
+    "*[\n  _type == \"venue\"\n] | order(name asc) {\n  _id,\n  name,\n  slug,\n  description,\n  \"image\": images[0],\n  address,\n  amenities\n}": VENUES_QUERYResult;
+    "*[\n  _type == \"venue\"\n  && slug.current == $slug\n][0]{\n  _id,\n  name,\n  slug,\n  description,\n  images,\n  address,\n  amenities,\n  openingHours\n}": VENUE_BY_SLUG_QUERYResult;
+    "*[\n  _type == \"venue\"\n  && count(*[\n    _type == \"classSession\"\n    && venue._ref == ^._id\n    && startTime > now()\n    && status == \"scheduled\"\n  ]) > 0\n] {\n  _id,\n  name,\n  slug,\n  \"address\": address {\n    lat,\n    lng,\n    fullAddress,\n    city\n  },\n  \"upcomingSessionsCount\": count(*[\n    _type == \"classSession\"\n    && venue._ref == ^._id\n    && startTime > now()\n    && status == \"scheduled\"\n  ])\n}": VENUES_WITH_SESSIONS_QUERYResult;
   }
 }

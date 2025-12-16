@@ -49,3 +49,38 @@ export const TIER_ACCESS: Record<Tier, string> = {
   champion: "All classes",
 };
 
+// Tier badge colors (Tailwind classes for light/dark mode)
+export const TIER_COLORS: Record<Tier | "none", string> = {
+  none: "bg-muted text-muted-foreground",
+  basic:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
+  performance:
+    "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
+  champion:
+    "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",
+};
+
+// Tier features for pricing displays
+export const TIER_FEATURES: Record<Tier, string[]> = {
+  basic: [
+    "5 classes per month",
+    "Access to Basic-tier classes",
+    "Book up to 3 days ahead",
+    "Cancel up to 12 hours before",
+  ],
+  performance: [
+    "12 classes per month",
+    "Access to Basic + Performance classes",
+    "Book up to 7 days ahead",
+    "Cancel up to 6 hours before",
+    "Priority booking",
+  ],
+  champion: [
+    "Unlimited classes",
+    "Access to ALL classes",
+    "Book up to 14 days ahead",
+    "Cancel up to 2 hours before",
+    "VIP studio access",
+    "Guest passes included",
+  ],
+};

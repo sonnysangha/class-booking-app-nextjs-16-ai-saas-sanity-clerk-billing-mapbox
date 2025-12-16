@@ -1,61 +1,52 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CheckCircleIcon } from "lucide-react";
+import { CheckCircleIcon, Clock, MapPin, User } from "lucide-react";
 import { urlFor } from "@/sanity/lib/image";
 import { format } from "date-fns";
+import type { UPCOMING_SESSIONS_QUERYResult } from "@/sanity.types";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { TIER_COLORS } from "@/lib/constants/subscription";
+import { formatDistance } from "@/lib/utils/distance";
+
+// Session type from the query result
+type Session = UPCOMING_SESSIONS_QUERYResult[number];
 
 interface SessionCardProps {
-  session: {
-    _id: string;
-    startTime: string;
-    maxCapacity: number;
-    currentBookings: number;
-    activity: {
-      name: string;
-      slug: { current: string };
-      instructor: string;
-      duration: number;
-      tierLevel: string;
-      image?: {
-        asset: {
-          _ref: string;
-        };
-      };
-    };
-    venue: {
-      name: string;
-      city?: string;
-    };
-  };
+  session: Session;
   isBooked?: boolean;
+  distance?: number;
 }
 
-const tierColors: Record<string, string> = {
-  basic: "bg-green-100 text-green-800",
-  performance: "bg-blue-100 text-blue-800",
-  champion: "bg-purple-100 text-purple-800",
-};
+export function SessionCard({
+  session,
+  isBooked = false,
+  distance,
+}: SessionCardProps) {
+  // Guard against missing required data
+  const { activity, venue, startTime, maxCapacity } = session;
+  if (!activity || !venue || !startTime || !maxCapacity) return null;
 
-export function SessionCard({ session, isBooked = false }: SessionCardProps) {
-  const spotsRemaining = session.maxCapacity - session.currentBookings;
+  const spotsRemaining = maxCapacity - session.currentBookings;
   const isFullyBooked = spotsRemaining <= 0;
-  const startDate = new Date(session.startTime);
+  const startDate = new Date(startTime);
+  const tierLevel = activity.tierLevel ?? "basic";
 
   return (
     <Link href={`/classes/${session._id}`}>
-      <div
-        className={`group overflow-hidden rounded-lg border bg-card transition-shadow hover:shadow-lg ${
-          isBooked ? "ring-2 ring-green-500 ring-offset-2" : ""
+      <Card
+        className={`group overflow-hidden p-0 gap-0 transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 ${
+          isBooked ? "ring-2 ring-primary ring-offset-2" : ""
         }`}
       >
         {/* Image */}
-        <div className="relative aspect-video bg-muted">
-          {session.activity.image ? (
+        <div className="relative aspect-video bg-muted overflow-hidden">
+          {activity.image ? (
             <Image
-              src={urlFor(session.activity.image).width(400).height(225).url()}
-              alt={session.activity.name}
+              src={urlFor(activity.image).width(400).height(225).url()}
+              alt={activity.name ?? "Class"}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -63,57 +54,77 @@ export function SessionCard({ session, isBooked = false }: SessionCardProps) {
             </div>
           )}
 
-          {/* Tier Badge */}
-          <span
-            className={`absolute left-2 top-2 rounded-full px-2 py-1 text-xs font-medium ${
-              tierColors[session.activity.tierLevel] || tierColors.basic
-            }`}
-          >
-            {session.activity.tierLevel.charAt(0).toUpperCase() +
-              session.activity.tierLevel.slice(1)}
-          </span>
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Booked Badge */}
+          {/* Tier Badge */}
+          <Badge
+            className={`absolute left-3 top-3 ${TIER_COLORS[tierLevel] || TIER_COLORS.basic} border-0`}
+          >
+            {tierLevel.charAt(0).toUpperCase() + tierLevel.slice(1)}
+          </Badge>
+
+          {/* Status Badge */}
           {isBooked ? (
-            <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+            <Badge className="absolute right-3 top-3 bg-primary text-primary-foreground border-0 gap-1">
               <CheckCircleIcon className="h-3 w-3" />
               Booked
-            </span>
+            </Badge>
           ) : isFullyBooked ? (
-            <span className="absolute right-2 top-2 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+            <Badge
+              variant="destructive"
+              className="absolute right-3 top-3 border-0"
+            >
               Fully Booked
-            </span>
+            </Badge>
           ) : spotsRemaining <= 3 ? (
-            <span className="absolute right-2 top-2 rounded-full bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800">
+            <Badge className="absolute right-3 top-3 bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 border-0">
               {spotsRemaining} spots left
-            </span>
+            </Badge>
           ) : null}
+
+          {/* Distance Badge */}
+          {distance !== undefined && (
+            <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm dark:bg-black/80">
+              {formatDistance(distance)}
+            </div>
+          )}
         </div>
 
         {/* Content */}
-        <div className="p-4">
-          <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-            {session.activity.name}
+        <CardContent className="p-4 !px-4">
+          <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">
+            {activity.name}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {session.activity.instructor} • {session.activity.duration} min
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {session.venue.name}
-            {session.venue.city && ` • ${session.venue.city}`}
-          </p>
+
+          <div className="mt-2 space-y-1.5">
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <User className="h-3.5 w-3.5" />
+              <span>{activity.instructor}</span>
+              <span className="mx-1">•</span>
+              <Clock className="h-3.5 w-3.5" />
+              <span>{activity.duration} min</span>
+            </p>
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              <span className="truncate">
+                {venue.name}
+                {venue.city && ` • ${venue.city}`}
+              </span>
+            </p>
+          </div>
 
           {/* Date/Time */}
-          <div className="mt-3 flex items-center justify-between">
-            <div className="text-sm font-medium">
+          <div className="mt-4 pt-3 border-t flex items-center justify-between">
+            <div className="text-sm font-semibold text-primary">
               {format(startDate, "EEE, MMM d")}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm font-medium text-muted-foreground">
               {format(startDate, "h:mm a")}
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </Link>
   );
 }

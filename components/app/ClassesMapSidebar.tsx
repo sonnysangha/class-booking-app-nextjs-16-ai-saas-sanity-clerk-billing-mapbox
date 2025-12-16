@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { MapPinIcon } from "lucide-react";
 import {
@@ -9,24 +9,47 @@ import {
   MapPopup,
   MapTileLayer,
   MapZoomControl,
+  useLeaflet,
 } from "@/components/ui/map";
+import { useMap } from "react-leaflet";
+import type { UPCOMING_SESSIONS_QUERYResult } from "@/sanity.types";
 
-interface Venue {
-  _id: string;
-  name: string;
-  city?: string;
-  address?: {
-    lat?: number;
-    lng?: number;
-    fullAddress?: string;
-  } | null;
-}
+// Venue type derived from the session query result
+type SessionVenue = NonNullable<UPCOMING_SESSIONS_QUERYResult[number]["venue"]>;
 
 interface ClassesMapSidebarProps {
-  venues: Venue[];
-  userLocation?: { lat: number; lng: number };
+  venues: SessionVenue[];
+  userLocation: { lat: number; lng: number };
   highlightedVenueId?: string | null;
   onVenueClick?: (venueId: string) => void;
+}
+
+/**
+ * Adjusts map view to fit all venue markers when filtered results change.
+ * Re-runs whenever points array changes (filtering, search, etc.)
+ */
+function MapBoundsFitter({ points }: { points: [number, number][] }) {
+  const map = useMap();
+  const { L } = useLeaflet();
+
+  useEffect(() => {
+    if (!L || points.length === 0) return;
+
+    if (points.length === 1) {
+      // Single point - center with comfortable zoom for context
+      map.setView(points[0], 14, { animate: true });
+    } else {
+      // Multiple points - calculate bounding box and fit all markers in view
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, {
+        padding: [40, 40], // px buffer from edges
+        maxZoom: 15, // don't zoom in too close
+        animate: true,
+      });
+    }
+  }, [L, map, points]);
+
+  return null; // Render nothing, just side effects
 }
 
 /**
@@ -39,9 +62,7 @@ export function ClassesMapSidebar({
   highlightedVenueId,
   onVenueClick,
 }: ClassesMapSidebarProps) {
-  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
-
-  // Count classes per venue
+  // Count how many classes each venue has (venues array contains duplicates per class)
   const venueCounts = venues.reduce(
     (acc, venue) => {
       acc[venue._id] = (acc[venue._id] || 0) + 1;
@@ -50,31 +71,41 @@ export function ClassesMapSidebar({
     {} as Record<string, number>,
   );
 
-  // Get unique venues with valid coordinates
-  const uniqueVenues = Array.from(
-    new Map(
-      venues
-        .filter(
-          (v) =>
-            v.address &&
-            typeof v.address.lat === "number" &&
-            typeof v.address.lng === "number",
-        )
-        .map((v) => [v._id, v]),
-    ).values(),
+  // Deduplicate venues by _id and filter to only those with valid coordinates
+  // Map key = venue._id ensures uniqueness, .values() extracts the venue objects
+  const uniqueVenues = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          venues
+            .filter(
+              (v) =>
+                v.address &&
+                typeof v.address.lat === "number" &&
+                typeof v.address.lng === "number",
+            )
+            .map((v) => [v._id, v]),
+        ).values(),
+      ),
+    [venues],
   );
 
-  // Calculate center - use user location or first venue
-  const defaultCenter: [number, number] = [25.2048, 55.2708]; // Dubai
-  const center: [number, number] = userLocation
-    ? [userLocation.lat, userLocation.lng]
-    : uniqueVenues.length > 0
-      ? [uniqueVenues[0].address!.lat!, uniqueVenues[0].address!.lng!]
-      : defaultCenter;
+  // All [lat, lng] coordinates the map should fit in view
+  // Includes venue locations + user's home location for context
+  const boundsPoints = useMemo(() => {
+    const pts: [number, number][] = uniqueVenues.map((v) => [
+      v.address?.lat ?? 0,
+      v.address?.lng ?? 0,
+    ]);
+    pts.push([userLocation.lat, userLocation.lng]);
+    return pts;
+  }, [uniqueVenues, userLocation]);
+
+  // Center on user's preferred location (always available from onboarding)
+  const center: [number, number] = [userLocation.lat, userLocation.lng];
 
   const handleVenueClick = useCallback(
-    (venue: Venue) => {
-      setSelectedVenue(venue);
+    (venue: SessionVenue) => {
       onVenueClick?.(venue._id);
     },
     [onVenueClick],
@@ -97,18 +128,19 @@ export function ClassesMapSidebar({
         <MapTileLayer />
         <MapZoomControl />
 
-        {/* User location marker */}
-        {userLocation && (
-          <MapMarker
-            position={[userLocation.lat, userLocation.lng]}
-            icon={
-              <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-blue-500 shadow-lg">
-                <div className="h-2 w-2 rounded-full bg-white" />
-              </div>
-            }
-            iconAnchor={[8, 8]}
-          />
-        )}
+        {/* Auto-fit bounds when venues change */}
+        <MapBoundsFitter points={boundsPoints} />
+
+        {/* User's home location - small blue dot */}
+        <MapMarker
+          position={[userLocation.lat, userLocation.lng]}
+          icon={
+            <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-blue-500 shadow-lg">
+              <div className="h-2 w-2 rounded-full bg-white" />
+            </div>
+          }
+          iconAnchor={[8, 8]} // Center the 16px icon on the coordinate
+        />
 
         {/* Venue markers */}
         {uniqueVenues.map((venue) => {
@@ -124,18 +156,18 @@ export function ClassesMapSidebar({
                   className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-[3px] text-[13px] font-bold text-white shadow-lg transition-all ${
                     isHighlighted
                       ? "scale-125 border-yellow-400 bg-yellow-500"
-                      : "border-white bg-linear-to-br from-violet-500 to-purple-500 hover:scale-110"
+                      : "border-white bg-gradient-to-br from-primary to-primary/80 hover:scale-110"
                   }`}
                   style={{
                     boxShadow: isHighlighted
                       ? "0 4px 12px rgba(234, 179, 8, 0.5)"
-                      : "0 4px 12px rgba(139, 92, 246, 0.4)",
+                      : "0 4px 12px rgba(234, 88, 12, 0.4)",
                   }}
                 >
                   {classCount}
                 </div>
               }
-              iconAnchor={[20, 20]}
+              iconAnchor={[20, 20]} // Center the 40px icon on the coordinate
               eventHandlers={{
                 click: () => handleVenueClick(venue),
               }}
@@ -152,12 +184,12 @@ export function ClassesMapSidebar({
                       </p>
                     )}
                   </div>
-                  <span className="inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/20 px-2 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-300">
+                  <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     {classCount} {classCount === 1 ? "class" : "classes"}
                   </span>
                   <Link
                     href={`/classes?venue=${venue._id}`}
-                    className="block w-full rounded-lg bg-violet-600 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-violet-700"
+                    className="block w-full rounded-lg bg-primary py-2 text-center text-sm font-medium text-white transition-colors hover:bg-primary/90"
                   >
                     View Classes
                   </Link>
@@ -167,8 +199,6 @@ export function ClassesMapSidebar({
           );
         })}
       </LeafletMap>
-
     </div>
   );
 }
-

@@ -15,6 +15,26 @@ import {
   getStatusLabel,
   getEffectiveStatus,
 } from "@/lib/constants/status";
+import type { USER_BOOKINGS_QUERYResult } from "@/sanity.types";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  TrendingUp,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+type Booking = USER_BOOKINGS_QUERYResult[number];
 
 export default async function BookingsPage() {
   const { userId } = await auth();
@@ -28,109 +48,161 @@ export default async function BookingsPage() {
     getUsageStats(userId),
   ]);
 
-  // Filter and sort upcoming bookings (earliest first)
-  const upcomingBookings = bookings
-    .filter(
-      (b: { status: string; classSession: { startTime: string } }) =>
-        b.status === "confirmed" && !isPast(new Date(b.classSession.startTime)),
-    )
-    .sort(
-      (
-        a: { classSession: { startTime: string } },
-        b: { classSession: { startTime: string } },
-      ) =>
-        new Date(a.classSession.startTime).getTime() -
-        new Date(b.classSession.startTime).getTime(),
-    );
+  // Filter out bookings with invalid data
+  const validBookings = bookings.filter(
+    (b) => b.status && b.classSession?.startTime,
+  );
 
-  // Filter and sort past bookings (most recent first)
-  const pastBookings = bookings
+  // Sort upcoming bookings (earliest first)
+  const upcomingBookings = validBookings
     .filter(
-      (b: { status: string; classSession: { startTime: string } }) =>
-        b.status !== "confirmed" || isPast(new Date(b.classSession.startTime)),
+      (b) =>
+        b.status === "confirmed" &&
+        b.classSession?.startTime &&
+        !isPast(new Date(b.classSession.startTime)),
     )
-    .sort(
-      (
-        a: { classSession: { startTime: string } },
-        b: { classSession: { startTime: string } },
-      ) =>
-        new Date(b.classSession.startTime).getTime() -
-        new Date(a.classSession.startTime).getTime(),
-    );
+    .sort((a, b) => {
+      const aTime = a.classSession?.startTime
+        ? new Date(a.classSession.startTime).getTime()
+        : 0;
+      const bTime = b.classSession?.startTime
+        ? new Date(b.classSession.startTime).getTime()
+        : 0;
+      return aTime - bTime;
+    });
+
+  // Sort past bookings (most recent first)
+  const pastBookings = validBookings
+    .filter(
+      (b) =>
+        b.status !== "confirmed" ||
+        (b.classSession?.startTime &&
+          isPast(new Date(b.classSession.startTime))),
+    )
+    .sort((a, b) => {
+      const aTime = a.classSession?.startTime
+        ? new Date(a.classSession.startTime).getTime()
+        : 0;
+      const bTime = b.classSession?.startTime
+        ? new Date(b.classSession.startTime).getTime()
+        : 0;
+      return bTime - aTime;
+    });
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="mb-8 text-3xl font-bold">My Bookings</h1>
+      {/* Page Header */}
+      <div className="border-b bg-gradient-to-r from-primary/5 via-background to-primary/5">
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl md:text-4xl font-bold">My Bookings</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your upcoming and past fitness classes
+          </p>
+        </div>
+      </div>
 
+      <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Attendance Confirmation Alert */}
         <AttendanceAlert bookings={bookings} />
 
         {/* Usage Stats - we dont show this if the user is on the champion tier as they have unlimited classes */}
         {usageStats.tier !== "champion" && (
-          <div className="rounded-lg border p-6 mb-8">
-            <h2 className="text-lg font-semibold mb-4">Monthly Usage</h2>
-            {usageStats.tier ? (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-muted-foreground">
-                    {usageStats.tier.charAt(0).toUpperCase() +
-                      usageStats.tier.slice(1)}{" "}
-                    Tier
-                  </span>
-                  <span className="font-medium">
-                    {usageStats.limit === Infinity
-                      ? `${usageStats.used} classes used`
-                      : `${usageStats.used} / ${usageStats.limit} classes`}
-                  </span>
-                </div>
-                {usageStats.limit !== Infinity && (
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-primary"
-                      style={{
-                        width: `${(usageStats.used / usageStats.limit) * 100}%`,
-                      }}
-                    />
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Monthly Usage
+              </CardTitle>
+              <CardDescription>
+                Track your class attendance this month
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {usageStats.tier ? (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant="secondary" className="capitalize">
+                      {usageStats.tier} Tier
+                    </Badge>
+                    <span className="font-semibold text-lg">
+                      {usageStats.limit === Infinity
+                        ? `${usageStats.used} classes used`
+                        : `${usageStats.used} / ${usageStats.limit} classes`}
+                    </span>
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-muted-foreground">
-                <p>No active subscription</p>
-                <Link
-                  href="/#pricing"
-                  className="text-primary hover:underline mt-2 inline-block"
-                >
-                  View subscription plans →
-                </Link>
-              </div>
-            )}
-          </div>
+                  {usageStats.limit !== Infinity && (
+                    <div className="h-3 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{
+                          width: `${Math.min((usageStats.used / usageStats.limit) * 100, 100)}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                  {usageStats.limit !== Infinity && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {usageStats.limit - usageStats.used > 0
+                        ? `${usageStats.limit - usageStats.used} classes remaining this month`
+                        : "You've used all your classes this month"}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground mb-4">
+                    No active subscription
+                  </p>
+                  <Button asChild>
+                    <Link href="/upgrade">
+                      View subscription plans
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* Calendar View */}
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Calendar View</h2>
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <Calendar className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold">Calendar View</h2>
+          </div>
           <BookingsCalendarView bookings={bookings} />
         </section>
 
         {/* Upcoming Bookings */}
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Upcoming Classes</h2>
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold">Upcoming Classes</h2>
+            <Badge variant="secondary" className="ml-2">
+              {upcomingBookings.length}
+            </Badge>
+          </div>
           {upcomingBookings.length === 0 ? (
-            <div className="rounded-lg border p-6 text-center text-muted-foreground">
-              <p>No upcoming classes</p>
-              <Link
-                href="/classes"
-                className="text-primary hover:underline mt-2 inline-block"
-              >
-                Browse classes →
-              </Link>
-            </div>
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Calendar className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground mb-4">
+                  No upcoming classes
+                </p>
+                <Button asChild>
+                  <Link href="/classes">
+                    Browse classes
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-4">
-              {upcomingBookings.map((booking: BookingType) => (
+              {upcomingBookings.map((booking) => (
                 <BookingCard key={booking._id} booking={booking} showActions />
               ))}
             </div>
@@ -139,14 +211,24 @@ export default async function BookingsPage() {
 
         {/* Past Bookings */}
         <section>
-          <h2 className="text-xl font-semibold mb-4">Past Classes</h2>
+          <div className="flex items-center gap-2 mb-6">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold text-muted-foreground">
+              Past Classes
+            </h2>
+            <Badge variant="outline" className="ml-2">
+              {pastBookings.length}
+            </Badge>
+          </div>
           {pastBookings.length === 0 ? (
-            <div className="rounded-lg border p-6 text-center text-muted-foreground">
-              <p>No past classes</p>
-            </div>
+            <Card className="border-dashed">
+              <CardContent className="py-8 text-center">
+                <p className="text-muted-foreground">No past classes yet</p>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="space-y-4">
-              {pastBookings.map((booking: BookingType) => (
+            <div className="space-y-3">
+              {pastBookings.map((booking) => (
                 <BookingCard
                   key={booking._id}
                   booking={booking}
@@ -161,117 +243,99 @@ export default async function BookingsPage() {
   );
 }
 
-interface BookingType {
-  _id: string;
-  status: string;
-  createdAt: string;
-  attendedAt?: string;
-  cancelledAt?: string;
-  classSession: {
-    _id: string;
-    startTime: string;
-    activity: {
-      _id: string;
-      name: string;
-      slug: { current: string };
-      duration: number;
-      image?: { asset: { _ref: string } };
-    };
-    venue: {
-      _id: string;
-      name: string;
-      city?: string;
-    };
-  };
-}
-
 function BookingCard({
   booking,
   showActions,
 }: {
-  booking: BookingType;
+  booking: Booking;
   showActions: boolean;
 }) {
-  const sessionStart = new Date(booking.classSession.startTime);
-  const sessionEnd = addHours(
-    sessionStart,
-    (booking.classSession.activity.duration || 60) / 60,
-  );
-  const attendanceWindowEnd = addHours(sessionEnd, 1); // 1 hour after class ends
+  const startTime = booking.classSession?.startTime;
+  if (!startTime) return null;
+
+  const sessionStart = new Date(startTime);
+  const duration = booking.classSession?.activity?.duration ?? 60;
+  const sessionEnd = addHours(sessionStart, duration / 60);
+  const attendanceWindowEnd = addHours(sessionEnd, 1);
   const now = new Date();
 
   const canConfirmAttendance =
     booking.status === "confirmed" &&
     isWithinInterval(now, { start: sessionStart, end: attendanceWindowEnd });
 
-  // Get effective status (handles no-show, in-progress states)
   const effectiveStatus = getEffectiveStatus(
-    booking.status,
+    booking.status ?? "confirmed",
     sessionStart,
-    booking.classSession.activity.duration || 60,
+    duration,
   );
 
-  return (
-    <div className="group flex gap-4 rounded-lg border p-4 transition-colors hover:border-primary/50">
-      {/* Clickable area linking to class */}
-      <Link
-        href={`/classes/${booking.classSession._id}`}
-        className="flex min-w-0 flex-1 gap-4"
-      >
-        {/* Image */}
-        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-          {booking.classSession.activity.image ? (
-            <Image
-              src={urlFor(booking.classSession.activity.image)
-                .width(96)
-                .height(96)
-                .url()}
-              alt={booking.classSession.activity.name}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-              No image
-            </div>
-          )}
-        </div>
+  const activity = booking.classSession?.activity;
+  const venue = booking.classSession?.venue;
 
-        {/* Details */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="truncate font-semibold transition-colors group-hover:text-primary">
-              {booking.classSession.activity.name}
-            </h3>
-            <span
-              className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${BOOKING_STATUS_COLORS[effectiveStatus] || BOOKING_STATUS_COLORS.confirmed}`}
+  return (
+    <Card
+      className={`group transition-all duration-300 hover:shadow-lg hover:border-primary/30 ${
+        showActions ? "" : "opacity-75"
+      }`}
+    >
+      <CardContent className="p-0">
+        <div className="flex gap-4 p-4">
+          <Link
+            href={`/classes/${booking.classSession?._id}`}
+            className="flex min-w-0 flex-1 gap-4"
+          >
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted">
+              {activity?.image ? (
+                <Image
+                  src={urlFor(activity.image).width(96).height(96).url()}
+                  alt={activity.name ?? "Class"}
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                  No image
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate font-semibold text-lg group-hover:text-primary transition-colors">
+                {activity?.name ?? "Unknown Class"}
+              </h3>
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+                <MapPin className="h-3.5 w-3.5" />
+                {venue?.name ?? "Unknown Venue"}
+                {venue?.city && ` • ${venue.city}`}
+              </p>
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {format(sessionStart, "EEE, MMM d")}
+                <span className="mx-1">•</span>
+                <Clock className="h-3.5 w-3.5" />
+                {format(sessionStart, "h:mm a")}
+                <span className="mx-1">•</span>
+                {duration} min
+              </p>
+            </div>
+          </Link>
+
+          <div className="flex shrink-0 flex-col items-end justify-center gap-2">
+            <Badge
+              className={`${BOOKING_STATUS_COLORS[effectiveStatus] ?? BOOKING_STATUS_COLORS.confirmed}`}
             >
               {getStatusLabel(effectiveStatus)}
-            </span>
+            </Badge>
+            {showActions && (
+              <BookingActions
+                bookingId={booking._id}
+                canConfirmAttendance={canConfirmAttendance}
+                isPast={isPast(sessionStart)}
+              />
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            {booking.classSession.venue.name}
-            {booking.classSession.venue.city &&
-              ` • ${booking.classSession.venue.city}`}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {format(sessionStart, "EEE, MMM d")} at{" "}
-            {format(sessionStart, "h:mm a")} •{" "}
-            {booking.classSession.activity.duration} min
-          </p>
         </div>
-      </Link>
-
-      {/* Actions */}
-      {showActions && (
-        <div className="flex shrink-0 flex-col gap-2">
-          <BookingActions
-            bookingId={booking._id}
-            canConfirmAttendance={canConfirmAttendance}
-            isPast={isPast(sessionStart)}
-          />
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

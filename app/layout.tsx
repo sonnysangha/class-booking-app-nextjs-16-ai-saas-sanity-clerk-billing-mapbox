@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ClassPass Clone",
+  title: "FitPass",
   description: "Book fitness classes with ease",
 };
 

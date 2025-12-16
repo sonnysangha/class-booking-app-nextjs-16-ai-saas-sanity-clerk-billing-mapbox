@@ -47,7 +47,7 @@ export function isWithinRadius(
  * Filter venues by distance from a user's location.
  */
 export function filterVenuesByDistance<
-  T extends { address?: { lat?: number; lng?: number } | null }
+  T extends { address?: { lat?: number | null; lng?: number | null } | null }
 >(
   venues: T[],
   userLat: number,
@@ -60,7 +60,7 @@ export function filterVenuesByDistance<
     const lat = venue.address?.lat;
     const lng = venue.address?.lng;
 
-    if (lat === undefined || lng === undefined) continue;
+    if (lat == null || lng == null) continue;
 
     if (isWithinRadius(userLat, userLng, lat, lng, radiusKm)) {
       results.push({
@@ -80,7 +80,9 @@ export function filterVenuesByDistance<
 export function filterSessionsByDistance<
   T extends {
     startTime: string;
-    venue?: { address?: { lat?: number; lng?: number } | null } | null;
+    venue?: {
+      address?: { lat?: number | null; lng?: number | null } | null;
+    } | null;
   }
 >(
   sessions: T[],
@@ -94,7 +96,7 @@ export function filterSessionsByDistance<
     const lat = session.venue?.address?.lat;
     const lng = session.venue?.address?.lng;
 
-    if (lat === undefined || lng === undefined) continue;
+    if (lat == null || lng == null) continue;
 
     if (isWithinRadius(userLat, userLng, lat, lng, radiusKm)) {
       results.push({

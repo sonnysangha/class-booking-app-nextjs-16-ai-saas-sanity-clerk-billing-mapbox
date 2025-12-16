@@ -2,10 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPinIcon, TargetIcon, ArrowRightIcon, Loader2Icon } from "lucide-react";
+import {
+  MapPinIcon,
+  TargetIcon,
+  ArrowRightIcon,
+  Loader2Icon,
+  Dumbbell,
+  Check,
+} from "lucide-react";
 import { AddressSearch } from "@/components/app/AddressSearch";
 import { RadiusSelector } from "@/components/app/RadiusSelector";
 import { completeOnboarding } from "@/lib/actions/profile";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 type Step = "location" | "radius";
 
@@ -47,8 +56,8 @@ export default function OnboardingPage() {
     });
 
     if (result.success) {
-      router.push("/");
-      router.refresh();
+      // Force full page reload to refresh Clerk user metadata cache
+      window.location.href = "/";
     } else {
       setError(result.error || "Something went wrong");
       setIsSubmitting(false);
@@ -60,28 +69,35 @@ export default function OnboardingPage() {
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto flex h-16 items-center px-4">
-          <span className="text-xl font-bold">ClassPass Clone</span>
+          <div className="flex items-center gap-2">
+            <Dumbbell className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">FitPass</span>
+          </div>
         </div>
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           {/* Progress indicator */}
-          <div className="mb-8 flex items-center justify-center gap-2">
+          <div className="mb-8 flex items-center justify-center gap-3">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all ${
                 step === "location"
-                  ? "bg-violet-600 text-white"
-                  : "bg-violet-100 text-violet-600 dark:bg-violet-900"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                  : "bg-primary/20 text-primary"
               }`}
             >
-              1
+              {step === "radius" ? <Check className="h-5 w-5" /> : "1"}
             </div>
-            <div className="h-0.5 w-8 bg-border" />
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+              className={`h-1 w-12 rounded-full transition-all ${
+                step === "radius" ? "bg-primary" : "bg-border"
+              }`}
+            />
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all ${
                 step === "radius"
-                  ? "bg-violet-600 text-white"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
                   : "bg-muted text-muted-foreground"
               }`}
             >
@@ -90,82 +106,88 @@ export default function OnboardingPage() {
           </div>
 
           {/* Step content */}
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            {step === "location" && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900">
-                    <MapPinIcon className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+          <Card className="shadow-xl border-primary/10">
+            <CardContent className="p-6">
+              {step === "location" && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                      <MapPinIcon className="h-7 w-7 text-primary" />
+                    </div>
+                    <h1 className="text-2xl font-bold">
+                      Where are you located?
+                    </h1>
+                    <p className="mt-2 text-muted-foreground">
+                      We'll show you classes near your location
+                    </p>
                   </div>
-                  <h1 className="text-2xl font-bold">Where are you located?</h1>
-                  <p className="mt-2 text-muted-foreground">
-                    We'll show you classes near your location
-                  </p>
+
+                  <AddressSearch
+                    value={location}
+                    onChange={setLocation}
+                    placeholder="Search for your city or address..."
+                  />
+
+                  <Button
+                    onClick={handleNext}
+                    disabled={!location}
+                    className="w-full h-12 text-base rounded-xl"
+                  >
+                    Continue
+                    <ArrowRightIcon className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
+              )}
 
-                <AddressSearch
-                  value={location}
-                  onChange={setLocation}
-                  placeholder="Search for your city or address..."
-                />
-
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!location}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 py-3 font-medium text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Continue
-                  <ArrowRightIcon className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-
-            {step === "radius" && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900">
-                    <TargetIcon className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+              {step === "radius" && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                      <TargetIcon className="h-7 w-7 text-primary" />
+                    </div>
+                    <h1 className="text-2xl font-bold">
+                      How far will you travel?
+                    </h1>
+                    <p className="mt-2 text-muted-foreground">
+                      Set your maximum distance for classes
+                    </p>
                   </div>
-                  <h1 className="text-2xl font-bold">How far will you travel?</h1>
-                  <p className="mt-2 text-muted-foreground">
-                    Set your maximum distance for classes
-                  </p>
+
+                  <RadiusSelector value={radius} onChange={setRadius} />
+
+                  {error && (
+                    <p className="text-center text-sm text-destructive">
+                      {error}
+                    </p>
+                  )}
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={handleBack}
+                      className="flex-1 h-12 text-base rounded-xl"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleComplete}
+                      disabled={!radius || isSubmitting}
+                      className="flex-1 h-12 text-base rounded-xl"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Get Started"
+                      )}
+                    </Button>
+                  </div>
                 </div>
-
-                <RadiusSelector value={radius} onChange={setRadius} />
-
-                {error && (
-                  <p className="text-center text-sm text-red-600">{error}</p>
-                )}
-
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="flex-1 rounded-lg border py-3 font-medium transition-colors hover:bg-accent"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleComplete}
-                    disabled={!radius || isSubmitting}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-violet-600 py-3 font-medium text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2Icon className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Get Started"
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Skip option for testing */}
           <p className="mt-6 text-center text-sm text-muted-foreground">
@@ -176,4 +198,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-

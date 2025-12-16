@@ -3,31 +3,10 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { SessionCard } from "./SessionCard";
-import { formatDistance } from "@/lib/utils/distance";
+import type { UPCOMING_SESSIONS_QUERYResult } from "@/sanity.types";
 
-interface Session {
-  _id: string;
-  startTime: string;
-  maxCapacity: number;
-  currentBookings: number;
-  activity: {
-    name: string;
-    slug: { current: string };
-    instructor: string;
-    duration: number;
-    tierLevel: string;
-    image?: {
-      asset: {
-        _ref: string;
-      };
-    };
-  };
-  venue: {
-    name: string;
-    city?: string;
-  };
-  distance: number;
-}
+// Session type from the query result, extended with distance (calculated client-side)
+type Session = UPCOMING_SESSIONS_QUERYResult[number] & { distance: number };
 
 interface ClassesContentProps {
   groupedSessions: [string, Session[]][];
@@ -205,15 +184,12 @@ export function ClassesContent({
           {/* Sessions Grid */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {sessions.map((session) => (
-              <div key={session._id} className="relative">
-                <SessionCard
-                  session={session}
-                  isBooked={bookedSet.has(session._id)}
-                />
-                <div className="absolute bottom-20 right-2 rounded-full bg-white/90 px-2 py-1 text-xs font-medium shadow backdrop-blur dark:bg-black/80">
-                  {formatDistance(session.distance)}
-                </div>
-              </div>
+              <SessionCard
+                key={session._id}
+                session={session}
+                isBooked={bookedSet.has(session._id)}
+                distance={session.distance}
+              />
             ))}
           </div>
         </section>

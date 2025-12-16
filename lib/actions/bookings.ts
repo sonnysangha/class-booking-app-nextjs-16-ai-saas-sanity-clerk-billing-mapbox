@@ -11,13 +11,13 @@ import {
 } from "@/lib/subscription";
 import type { Tier } from "@/lib/subscription";
 import {
-  USER_PROFILE_BY_CLERK_ID_QUERY,
   SESSION_FOR_BOOKING_QUERY,
   EXISTING_BOOKING_QUERY,
   BOOKING_FOR_CANCEL_QUERY,
   BOOKING_FOR_ATTENDANCE_QUERY,
-} from "@/sanity/lib/queries/server";
-import { CANCELLED_BOOKING_QUERY } from "@/sanity/lib/queries/bookings";
+  CANCELLED_BOOKING_QUERY,
+  USER_PROFILE_ID_QUERY,
+} from "@/sanity/lib/queries/bookings";
 
 export type BookingResult = {
   success: boolean;
@@ -32,7 +32,7 @@ export type BookingResult = {
 // Get or create user profile in Sanity
 async function getOrCreateUserProfile(clerkUserId: string): Promise<string> {
   // Check if user profile exists
-  const existingProfile = await client.fetch(USER_PROFILE_BY_CLERK_ID_QUERY, {
+  const existingProfile = await client.fetch(USER_PROFILE_ID_QUERY, {
     clerkId: clerkUserId,
   });
 
@@ -81,7 +81,7 @@ export async function createBooking(sessionId: string): Promise<BookingResult> {
     }
 
     // Check if session is in the past
-    if (new Date(session.startTime) < new Date()) {
+    if (!session.startTime || new Date(session.startTime) < new Date()) {
       return {
         success: false,
         error: "Cannot book a class that has already started",
@@ -97,7 +97,8 @@ export async function createBooking(sessionId: string): Promise<BookingResult> {
     }
 
     // Check capacity
-    if (session.currentBookings >= session.maxCapacity) {
+    const maxCapacity = session.maxCapacity ?? 0;
+    if (session.currentBookings >= maxCapacity) {
       return { success: false, error: "This class is fully booked" };
     }
 
@@ -129,7 +130,7 @@ export async function createBooking(sessionId: string): Promise<BookingResult> {
     }
 
     // Check tier access
-    const activityTier = session.activity.tierLevel as Tier;
+    const activityTier = (session.activity?.tierLevel ?? "basic") as Tier;
     if (!canAccessClass(userTier, activityTier)) {
       return {
         success: false,
@@ -214,7 +215,7 @@ export async function cancelBooking(bookingId: string): Promise<BookingResult> {
     }
 
     // Get user profile
-    const userProfile = await client.fetch(USER_PROFILE_BY_CLERK_ID_QUERY, {
+    const userProfile = await client.fetch(USER_PROFILE_ID_QUERY, {
       clerkId: userId,
     });
 
@@ -238,7 +239,8 @@ export async function cancelBooking(bookingId: string): Promise<BookingResult> {
     }
 
     // Check if class has already started
-    if (new Date(booking.classSession.startTime) < new Date()) {
+    const startTime = booking.classSession?.startTime;
+    if (!startTime || new Date(startTime) < new Date()) {
       return {
         success: false,
         error: "Cannot cancel a class that has already started",
@@ -275,7 +277,7 @@ export async function confirmAttendance(
     }
 
     // Get user profile
-    const userProfile = await client.fetch(USER_PROFILE_BY_CLERK_ID_QUERY, {
+    const userProfile = await client.fetch(USER_PROFILE_ID_QUERY, {
       clerkId: userId,
     });
 
@@ -300,8 +302,12 @@ export async function confirmAttendance(
       };
     }
 
-    const sessionStart = new Date(booking.classSession.startTime);
-    const sessionDuration = booking.classSession.activity.duration || 60;
+    const classStartTime = booking.classSession?.startTime;
+    if (!classStartTime) {
+      return { success: false, error: "Invalid session data" };
+    }
+    const sessionStart = new Date(classStartTime);
+    const sessionDuration = booking.classSession?.activity?.duration ?? 60;
     const sessionEndMs = sessionStart.getTime() + sessionDuration * 60 * 1000;
     const attendanceWindowEndMs = sessionEndMs + 60 * 60 * 1000; // 1 hour after session ends
     const now = new Date();
