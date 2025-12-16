@@ -15,7 +15,7 @@ import { ClassesMapSidebar } from "@/components/app/ClassesMapSidebar";
 import { ClassSearch } from "@/components/app/ClassSearch";
 import { ClassesFilters } from "@/components/app/ClassesFilters";
 import { getUserPreferences } from "@/lib/actions/profile";
-import { filterSessionsByDistance } from "@/lib/utils/distance";
+import { filterSessionsByDistance, getBoundingBox } from "@/lib/utils/distance";
 import Link from "next/link";
 import { MapPinIcon, SearchIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -45,11 +45,37 @@ export default async function ClassesPage({ searchParams }: PageProps) {
     : [];
   const tierLevels = tierParam ? tierParam.split(",").filter(Boolean) : [];
 
+  // Get user preferences first - needed for bounding box calculation
+  const userPreferences = await getUserPreferences();
+
+  // User preferences are always set via onboarding - redirect if missing
+  if (!userPreferences?.location || !userPreferences?.searchRadius) {
+    redirect("/onboarding");
+  }
+
+  const { location, searchRadius } = userPreferences;
+
+  // GEOGRAPHIC FILTERING - Two-step approach for performance:
+  //
+  // Step 1 (Database): Calculate a rectangular bounding box from user's location + radius.
+  // This is passed to GROQ to filter at the database level, reducing 100k+ global sessions
+  // down to ~100-500 sessions within the user's general area.
+  //
+  // Step 2 (Client): The filterSessionsByDistance() function further refines results using
+  // the Haversine formula for accurate circular distance calculation. This handles the
+  // corner cases where the rectangular bounding box extends beyond the circular radius.
+  const { minLat, maxLat, minLng, maxLng } = getBoundingBox(
+    location.lat,
+    location.lng,
+    searchRadius,
+  );
+
   // Determine which query to use based on search vs filters
+  // Both queries include bounding box params for geographic pre-filtering
   const sessionsQuery = searchQuery
     ? sanityFetch({
         query: SEARCH_SESSIONS_QUERY,
-        params: { searchTerm: searchQuery },
+        params: { searchTerm: searchQuery, minLat, maxLat, minLng, maxLng },
       })
     : sanityFetch({
         query: FILTERED_SESSIONS_QUERY,
@@ -57,6 +83,10 @@ export default async function ClassesPage({ searchParams }: PageProps) {
           venueId: venueId || "",
           categoryIds,
           tierLevels,
+          minLat,
+          maxLat,
+          minLng,
+          maxLng,
         },
       });
 
@@ -71,13 +101,11 @@ export default async function ClassesPage({ searchParams }: PageProps) {
   const [
     sessionsResult,
     categoriesResult,
-    userPreferences,
     bookedSessionsResult,
     venueNameResult,
   ] = await Promise.all([
     sessionsQuery,
     sanityFetch({ query: CATEGORIES_QUERY }),
-    getUserPreferences(),
     userId
       ? sanityFetch({
           query: USER_BOOKED_SESSION_IDS_QUERY,
@@ -98,13 +126,6 @@ export default async function ClassesPage({ searchParams }: PageProps) {
   // Count active filters for badge display
   const activeFilterCount =
     (venueId ? 1 : 0) + categoryIds.length + tierLevels.length;
-
-  // User preferences are always set via onboarding - redirect if missing
-  if (!userPreferences?.location || !userPreferences?.searchRadius) {
-    redirect("/onboarding");
-  }
-
-  const { location, searchRadius } = userPreferences;
 
   // Filter sessions that have valid startTime for the distance filter
   const sessionsForFilter = allSessions

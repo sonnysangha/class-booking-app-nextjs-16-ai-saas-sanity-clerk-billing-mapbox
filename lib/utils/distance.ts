@@ -29,6 +29,58 @@ function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
+export interface BoundingBox {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+/**
+ * Calculate a geographic bounding box from a center point and radius.
+ *
+ * WHY BOUNDING BOX?
+ * -----------------
+ * The Haversine formula (used in calculateDistance) is accurate but computationally
+ * expensive to run on every record in the database. With 100k+ classes globally,
+ * fetching all and filtering client-side is too slow.
+ *
+ * Instead, we use a two-step approach:
+ * 1. BOUNDING BOX (fast, database-level): Filter using simple lat/lng comparisons
+ *    in GROQ. This creates a rectangular "box" around the user and returns only
+ *    sessions within that box (~100-500 results instead of 100k+).
+ *
+ * 2. HAVERSINE (accurate, client-side): Fine-tune the results using the precise
+ *    circular distance calculation. The bounding box is a rectangle inscribed
+ *    around the circle, so corners may include locations slightly outside the radius.
+ *
+ * LATITUDE vs LONGITUDE
+ * ---------------------
+ * - 1° of latitude ≈ 111 km everywhere on Earth (constant)
+ * - 1° of longitude varies by latitude (shrinks toward poles)
+ *   At equator: ~111 km, at 45°: ~78 km, at poles: ~0 km
+ *   Formula: 111 km × cos(latitude)
+ */
+export function getBoundingBox(
+  lat: number,
+  lng: number,
+  radiusKm: number
+): BoundingBox {
+  // Latitude: 1 degree ≈ 111 km (constant worldwide)
+  const latDelta = radiusKm / 111;
+
+  // Longitude: 1 degree varies by latitude, shrinking toward the poles
+  // At the user's latitude, calculate how many degrees equal the radius
+  const lngDelta = radiusKm / (111 * Math.cos(lat * (Math.PI / 180)));
+
+  return {
+    minLat: lat - latDelta,
+    maxLat: lat + latDelta,
+    minLng: lng - lngDelta,
+    maxLng: lng + lngDelta,
+  };
+}
+
 /**
  * Check if a point is within a given radius of another point.
  */

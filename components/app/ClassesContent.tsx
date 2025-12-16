@@ -3,10 +3,10 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { SessionCard } from "./SessionCard";
-import type { UPCOMING_SESSIONS_QUERYResult } from "@/sanity.types";
+import type { FILTERED_SESSIONS_QUERYResult } from "@/sanity.types";
 
 // Session type from the query result, extended with distance (calculated client-side)
-type Session = UPCOMING_SESSIONS_QUERYResult[number] & { distance: number };
+type Session = FILTERED_SESSIONS_QUERYResult[number] & { distance: number };
 
 interface ClassesContentProps {
   groupedSessions: [string, Session[]][];

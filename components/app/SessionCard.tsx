@@ -3,14 +3,14 @@ import Image from "next/image";
 import { CheckCircleIcon, Clock, MapPin, User } from "lucide-react";
 import { urlFor } from "@/sanity/lib/image";
 import { format } from "date-fns";
-import type { UPCOMING_SESSIONS_QUERYResult } from "@/sanity.types";
+import type { FILTERED_SESSIONS_QUERYResult } from "@/sanity.types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TIER_COLORS } from "@/lib/constants/subscription";
 import { formatDistance } from "@/lib/utils/distance";
 
-// Session type from the query result
-type Session = UPCOMING_SESSIONS_QUERYResult[number];
+// Session type from the query result (with distance added by client-side filtering)
+type Session = FILTERED_SESSIONS_QUERYResult[number];
 
 interface SessionCardProps {
   session: Session;

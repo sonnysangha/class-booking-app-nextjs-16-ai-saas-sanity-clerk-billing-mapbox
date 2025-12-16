@@ -101,12 +101,24 @@ export const SESSIONS_BY_ACTIVITY_QUERY = defineQuery(`*[
   }
 }`);
 
-// Get sessions with optional filters (venue, category, tier)
-// All filters are optional - pass empty string/array to skip that filter
+// Get sessions with optional filters (venue, category, tier) within a geographic bounding box
+//
+// BOUNDING BOX FILTERING ($minLat, $maxLat, $minLng, $maxLng):
+// These params define a rectangular geographic area around the user's location.
+// By filtering at the database level, we avoid fetching 100k+ global sessions
+// and instead return only ~100-500 sessions in the user's area.
+// The client then uses Haversine distance for precise circular radius filtering.
+//
+// Other filters are optional - pass empty string/array to skip
 export const FILTERED_SESSIONS_QUERY = defineQuery(`*[
   _type == "classSession"
   && startTime > now()
   && status == "scheduled"
+  // Bounding box: only fetch sessions where venue is within the geographic rectangle
+  && venue->address.lat >= $minLat
+  && venue->address.lat <= $maxLat
+  && venue->address.lng >= $minLng
+  && venue->address.lng <= $maxLng
   && ($venueId == "" || venue._ref == $venueId)
   && (count($categoryIds) == 0 || activity->category._ref in $categoryIds)
   && (count($tierLevels) == 0 || activity->tierLevel in $tierLevels)
@@ -147,11 +159,17 @@ export const FILTERED_SESSIONS_QUERY = defineQuery(`*[
   }
 }`);
 
-// Search sessions by activity name or instructor name
+// Search sessions by activity name or instructor name within a geographic bounding box
+// Same bounding box approach as FILTERED_SESSIONS_QUERY - search is scoped to user's area
 export const SEARCH_SESSIONS_QUERY = defineQuery(`*[
   _type == "classSession"
   && startTime > now()
   && status == "scheduled"
+  // Bounding box: scope search results to user's geographic area
+  && venue->address.lat >= $minLat
+  && venue->address.lat <= $maxLat
+  && venue->address.lng >= $minLng
+  && venue->address.lng <= $maxLng
   && (
     activity->name match $searchTerm + "*"
     || activity->instructor match $searchTerm + "*"
@@ -173,7 +191,12 @@ export const SEARCH_SESSIONS_QUERY = defineQuery(`*[
     instructor,
     duration,
     tierLevel,
-    "image": images[0]
+    "image": images[0],
+    category->{
+      _id,
+      name,
+      slug
+    }
   },
   venue->{
     _id,
