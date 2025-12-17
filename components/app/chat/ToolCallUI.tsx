@@ -12,10 +12,11 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import {
-  ClassCardWidget,
-  SessionCardWidget,
-  BookingCardWidget,
-} from "@/components/app/ai";
+  ResultCard,
+  type SearchClass,
+  type ClassSession,
+  type UserBooking,
+} from "./ResultCard";
 import type { ToolCallPart } from "./types";
 
 // Tool display config
@@ -80,25 +81,17 @@ export function ToolCallUI({ toolPart, closeChat }: ToolCallUIProps) {
     toolPart.state === "result" ||
     toolPart.output !== undefined ||
     toolPart.result !== undefined;
-  const result = (toolPart.output || toolPart.result) as
-    | Record<string, unknown>
-    | undefined;
+  const result = toolPart.output ?? toolPart.result;
 
   // Get items array from result (handles classes, sessions, venues, bookings, recommendations)
   const items =
-    result?.classes ||
-    result?.sessions ||
-    result?.venues ||
-    result?.bookings ||
-    result?.recommendations;
+    result?.classes ??
+    result?.sessions ??
+    result?.venues ??
+    result?.bookings ??
+    result?.recommendations ??
+    [];
   const itemsArray = Array.isArray(items) ? items : [];
-
-  // Debug - check why widgets don't show
-  console.log(`[${toolName}]`, {
-    isComplete,
-    hasResult: !!result,
-    itemCount: itemsArray.length,
-  });
 
   return (
     <div className="space-y-2">
@@ -149,35 +142,40 @@ export function ToolCallUI({ toolPart, closeChat }: ToolCallUIProps) {
           <p className="text-xs text-muted-foreground">
             {itemsArray.length} result{itemsArray.length !== 1 ? "s" : ""}
           </p>
-          {itemsArray.slice(0, 3).map((item: Record<string, unknown>) => {
-            const key = (item._id || item.id) as string;
+          {itemsArray.slice(0, 3).map((item, index) => {
+            // Items have either _id (Sanity docs) or id (transformed results)
+            const record = item as Record<string, unknown>;
+            const key = ((record._id ?? record.id) as string) || String(index);
 
             if (
               toolName === "searchClasses" ||
               toolName === "getRecommendations"
             ) {
               return (
-                <ClassCardWidget
+                <ResultCard
                   key={key}
-                  classItem={item as never}
+                  variant="class"
+                  data={item as unknown as SearchClass}
                   onClose={closeChat}
                 />
               );
             }
             if (toolName === "getClassSessions") {
               return (
-                <SessionCardWidget
+                <ResultCard
                   key={key}
-                  session={item as never}
+                  variant="session"
+                  data={item as unknown as ClassSession}
                   onClose={closeChat}
                 />
               );
             }
             if (toolName === "getUserBookings") {
               return (
-                <BookingCardWidget
+                <ResultCard
                   key={key}
-                  booking={item as never}
+                  variant="booking"
+                  data={item as unknown as UserBooking}
                   onClose={closeChat}
                 />
               );

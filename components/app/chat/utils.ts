@@ -13,25 +13,25 @@ export function getMessageText(message: UIMessage): string {
 }
 
 // Check if message has tool calls (parts starting with "tool-")
+// Note: AI SDK parts are intentionally loosely typed, so we extract what we need
 export function getToolParts(message: UIMessage): ToolCallPart[] {
   if (!message.parts || message.parts.length === 0) {
     return [];
   }
   return message.parts
     .filter((part) => part.type.startsWith("tool-"))
-    .map((part) => part as unknown as ToolCallPart);
-}
-
-// Get human-readable tool name
-export function getToolDisplayName(toolName: string): string {
-  const toolNames: Record<string, string> = {
-    searchClasses: "Searching classes",
-    getClassSessions: "Finding sessions",
-    searchVenues: "Searching venues",
-    getCategories: "Loading categories",
-    getSubscriptionInfo: "Getting pricing",
-    getRecommendations: "Finding recommendations",
-    getUserBookings: "Loading your bookings",
-  };
-  return toolNames[toolName] || toolName;
+    .map((part) => {
+      // Extract known fields from the part object
+      const p = part as Record<string, unknown>;
+      return {
+        type: p.type as string,
+        toolName: p.toolName as string | undefined,
+        toolCallId: p.toolCallId as string | undefined,
+        state: p.state as ToolCallPart["state"],
+        input: p.input as Record<string, unknown> | undefined,
+        args: p.args as Record<string, unknown> | undefined,
+        output: p.output as ToolCallPart["output"],
+        result: p.result as ToolCallPart["result"],
+      };
+    });
 }

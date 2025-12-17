@@ -48,7 +48,7 @@ export function AppHeader() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden items-center gap-6 md:flex">
           {isSignedIn &&
             navItems.map((item) => {
               const isActive =
@@ -61,8 +61,8 @@ export function AppHeader() {
                   className={cn(
                     "text-sm font-medium transition-colors",
                     isActive
-                      ? "text-primary font-semibold"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "font-semibold text-primary"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {item.label}
@@ -93,7 +93,7 @@ export function AppHeader() {
             <SheetTrigger asChild>
               <button
                 type="button"
-                className="p-2 hover:bg-accent rounded-md"
+                className="rounded-md p-2 hover:bg-accent"
                 aria-label="Open menu"
               >
                 <MenuIcon className="h-5 w-5" />
@@ -118,10 +118,10 @@ export function AppHeader() {
                         href={item.href}
                         onClick={() => setOpen(false)}
                         className={cn(
-                          "text-base font-medium transition-all duration-200 py-3 px-4 rounded-lg",
+                          "rounded-lg px-4 py-3 text-base font-medium transition-all duration-200",
                           isActive
-                            ? "text-primary font-semibold bg-primary/10 border border-primary/20"
-                            : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                            ? "border border-primary/20 bg-primary/10 font-semibold text-primary"
+                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                         )}
                       >
                         {item.label}
@@ -129,11 +129,11 @@ export function AppHeader() {
                     );
                   })}
                 <SignedOut>
-                  <div className="pt-6 mt-6 border-t">
+                  <div className="mt-6 border-t pt-6">
                     <SignInButton mode="modal">
                       <button
                         type="button"
-                        className="w-full rounded-lg bg-primary px-6 py-3 text-base font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                        className="w-full rounded-lg bg-primary px-6 py-3 text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
                       >
                         Sign In
                       </button>
@@ -148,3 +148,4 @@ export function AppHeader() {
     </header>
   );
 }
+

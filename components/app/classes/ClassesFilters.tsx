@@ -262,3 +262,4 @@ export function ClassesFilters({
     </aside>
   );
 }
+

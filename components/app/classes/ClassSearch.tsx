@@ -67,7 +67,7 @@ export function ClassSearch({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
-        className="h-11 w-full rounded-full border bg-background pl-11 pr-11 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+        className="h-11 w-full rounded-full border bg-background pl-11 pr-11 text-sm transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
       />
       {query && (
         <button
@@ -81,3 +81,4 @@ export function ClassSearch({
     </div>
   );
 }
+

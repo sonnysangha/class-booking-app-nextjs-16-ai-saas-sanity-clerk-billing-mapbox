@@ -48,7 +48,7 @@ export function VenueMap({
       <div
         className={cn(
           "flex items-center justify-center rounded-lg bg-muted text-muted-foreground",
-          className,
+          className
         )}
       >
         <div className="text-center">
@@ -94,3 +94,4 @@ export function VenueMap({
     </LeafletMap>
   );
 }
+

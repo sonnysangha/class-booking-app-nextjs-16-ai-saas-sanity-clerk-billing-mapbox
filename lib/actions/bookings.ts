@@ -1,6 +1,6 @@
 "use server";
 
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { client } from "@/sanity/lib/client";
 import { writeClient } from "@/sanity/lib/writeClient";
@@ -18,6 +18,7 @@ import {
   CANCELLED_BOOKING_QUERY,
   USER_PROFILE_ID_QUERY,
 } from "@/sanity/lib/queries/bookings";
+import { getOrCreateUserProfile } from "@/lib/utils/user-profile";
 
 export type BookingResult = {
   success: boolean;
@@ -28,36 +29,6 @@ export type BookingResult = {
   requiredTier?: string;
   limitReached?: boolean;
 };
-
-// Get or create user profile in Sanity
-async function getOrCreateUserProfile(clerkUserId: string): Promise<string> {
-  // Check if user profile exists
-  const existingProfile = await client.fetch(USER_PROFILE_ID_QUERY, {
-    clerkId: clerkUserId,
-  });
-
-  if (existingProfile) {
-    return existingProfile._id;
-  }
-
-  // Fetch user details from Clerk
-  const clerk = await clerkClient();
-  const clerkUser = await clerk.users.getUser(clerkUserId);
-
-  // Create new user profile
-  const newProfile = await writeClient.create({
-    _type: "userProfile",
-    clerkId: clerkUserId,
-    email: clerkUser.emailAddresses[0]?.emailAddress,
-    firstName: clerkUser.firstName,
-    lastName: clerkUser.lastName,
-    imageUrl: clerkUser.imageUrl,
-    subscriptionTier: "none",
-    createdAt: new Date().toISOString(),
-  });
-
-  return newProfile._id;
-}
 
 export async function createBooking(sessionId: string): Promise<BookingResult> {
   try {

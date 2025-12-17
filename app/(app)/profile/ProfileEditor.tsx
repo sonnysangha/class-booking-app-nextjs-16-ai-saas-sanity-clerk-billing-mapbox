@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PencilIcon, Loader2Icon, CheckIcon } from "lucide-react";
-import { AddressSearch } from "@/components/app/AddressSearch";
-import { RadiusSelector } from "@/components/app/RadiusSelector";
+import { AddressSearch } from "@/components/app/maps/AddressSearch";
+import { RadiusSelector } from "@/components/app/maps/RadiusSelector";
 import { updateLocationPreferences } from "@/lib/actions/profile";
 
 interface LocationData {

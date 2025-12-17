@@ -12,13 +12,10 @@ import {
   usePendingMessage,
 } from "@/lib/store/chat-store-provider";
 
-import {
-  getMessageText,
-  getToolParts,
-  WelcomeScreen,
-  MessageBubble,
-  ToolCallUI,
-} from "./chat";
+import { getMessageText, getToolParts } from "./utils";
+import { WelcomeScreen } from "./WelcomeScreen";
+import { MessageBubble } from "./MessageBubble";
+import { ToolCallUI } from "./ToolCallUI";
 
 export function ChatSheet() {
   const isOpen = useIsChatOpen();
@@ -65,7 +62,7 @@ export function ChatSheet() {
       />
 
       {/* Sidebar */}
-      <div className="fixed top-0 right-0 z-50 flex h-full w-full flex-col border-l border-border bg-background overscroll-contain sm:w-[448px] animate-in slide-in-from-right duration-300">
+      <div className="fixed right-0 top-0 z-50 flex h-full w-full flex-col overscroll-contain border-l border-border bg-background duration-300 animate-in slide-in-from-right sm:w-[448px]">
         {/* Header */}
         <header className="shrink-0 border-b border-border">
           <div className="flex h-16 items-center justify-between px-6">
@@ -169,3 +166,4 @@ export function ChatSheet() {
     </>
   );
 }
+

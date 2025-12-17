@@ -68,7 +68,7 @@ export function ClassesMapSidebar({
       acc[venue._id] = (acc[venue._id] || 0) + 1;
       return acc;
     },
-    {} as Record<string, number>,
+    {} as Record<string, number>
   );
 
   // Deduplicate venues by _id and filter to only those with valid coordinates
@@ -82,12 +82,12 @@ export function ClassesMapSidebar({
               (v) =>
                 v.address &&
                 typeof v.address.lat === "number" &&
-                typeof v.address.lng === "number",
+                typeof v.address.lng === "number"
             )
-            .map((v) => [v._id, v]),
-        ).values(),
+            .map((v) => [v._id, v])
+        ).values()
       ),
-    [venues],
+    [venues]
   );
 
   // All [lat, lng] coordinates the map should fit in view
@@ -108,7 +108,7 @@ export function ClassesMapSidebar({
     (venue: SessionVenue) => {
       onVenueClick?.(venue._id);
     },
-    [onVenueClick],
+    [onVenueClick]
   );
 
   if (uniqueVenues.length === 0) {
@@ -202,3 +202,4 @@ export function ClassesMapSidebar({
     </div>
   );
 }
+

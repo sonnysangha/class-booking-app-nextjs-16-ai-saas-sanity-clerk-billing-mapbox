@@ -113,7 +113,7 @@ export function ClassesContent({
 
   const totalSessions = groupedSessions.reduce(
     (acc, [, sessions]) => acc + sessions.length,
-    0,
+    0
   );
 
   return (
@@ -126,11 +126,11 @@ export function ClassesContent({
 
       {/* Sticky Day Tabs */}
       <div className="sticky top-0 z-10 -mx-4 mb-6 bg-background/95 px-4 py-3 backdrop-blur">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
           {[...dayKeys].map((dateKey) => {
             // This is the sessions for the day
             const sessionsForDay = groupedSessions.find(
-              ([key]) => key === dateKey,
+              ([key]) => key === dateKey
             )?.[1];
             // This is the number of sessions for the day
             const count = sessionsForDay?.length || 0;
@@ -197,3 +197,4 @@ export function ClassesContent({
     </div>
   );
 }
+

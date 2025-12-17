@@ -3,7 +3,10 @@
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
-import { useIsChatOpen, useChatActions } from "@/lib/store/chat-store-provider";
+import {
+  useIsChatOpen,
+  useChatActions,
+} from "@/lib/store/chat-store-provider";
 
 export function ChatButton() {
   const { isSignedIn, isLoaded } = useUser();
@@ -36,3 +39,4 @@ export function ChatButton() {
     </Button>
   );
 }
+

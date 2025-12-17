@@ -9,7 +9,11 @@ interface BookingActionsProps {
   isPast: boolean;
 }
 
-export function BookingActions({ bookingId, canConfirmAttendance, isPast }: BookingActionsProps) {
+export function BookingActions({
+  bookingId,
+  canConfirmAttendance,
+  isPast,
+}: BookingActionsProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +54,7 @@ export function BookingActions({ bookingId, canConfirmAttendance, isPast }: Book
           {isPending ? "..." : "I've Attended"}
         </button>
       )}
-      
+
       {!isPast && (
         <button
           onClick={handleCancel}
@@ -61,9 +65,8 @@ export function BookingActions({ bookingId, canConfirmAttendance, isPast }: Book
         </button>
       )}
 
-      {error && (
-        <p className="text-xs text-red-600">{error}</p>
-      )}
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
 }
+

@@ -1,10 +1,10 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import { OnboardingGuard } from "@/components/app/OnboardingGuard";
-import { AppHeader } from "@/components/app/AppHeader";
+import { OnboardingGuard } from "@/components/app/onboarding/OnboardingGuard";
+import { AppHeader } from "@/components/app/layout/AppHeader";
 import { ChatStoreProvider } from "@/lib/store/chat-store-provider";
-import { AppShell } from "@/components/app/AppShell";
-import { ChatSheet } from "@/components/app/ChatSheet";
-import { ChatButton } from "@/components/app/ChatButton";
+import { AppShell } from "@/components/app/layout/AppShell";
+import { ChatSheet } from "@/components/app/chat/ChatSheet";
+import { ChatButton } from "@/components/app/chat/ChatButton";
 
 export default function AppLayout({
   children,

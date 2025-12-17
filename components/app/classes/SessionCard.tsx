@@ -35,12 +35,12 @@ export function SessionCard({
   return (
     <Link href={`/classes/${session._id}`}>
       <Card
-        className={`group overflow-hidden p-0 gap-0 transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 ${
+        className={`group gap-0 overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl ${
           isBooked ? "ring-2 ring-primary ring-offset-2" : ""
         }`}
       >
         {/* Image */}
-        <div className="relative aspect-video bg-muted overflow-hidden">
+        <div className="relative aspect-video overflow-hidden bg-muted">
           {activity.image ? (
             <Image
               src={urlFor(activity.image).width(400).height(225).url()}
@@ -55,18 +55,18 @@ export function SessionCard({
           )}
 
           {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
           {/* Tier Badge */}
           <Badge
-            className={`absolute left-3 top-3 ${TIER_COLORS[tierLevel] || TIER_COLORS.basic} border-0`}
+            className={`absolute left-3 top-3 border-0 ${TIER_COLORS[tierLevel] || TIER_COLORS.basic}`}
           >
             {tierLevel.charAt(0).toUpperCase() + tierLevel.slice(1)}
           </Badge>
 
           {/* Status Badge */}
           {isBooked ? (
-            <Badge className="absolute right-3 top-3 bg-primary text-primary-foreground border-0 gap-1">
+            <Badge className="absolute right-3 top-3 gap-1 border-0 bg-primary text-primary-foreground">
               <CheckCircleIcon className="h-3 w-3" />
               Booked
             </Badge>
@@ -78,7 +78,7 @@ export function SessionCard({
               Fully Booked
             </Badge>
           ) : spotsRemaining <= 3 ? (
-            <Badge className="absolute right-3 top-3 bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 border-0">
+            <Badge className="absolute right-3 top-3 border-0 bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
               {spotsRemaining} spots left
             </Badge>
           ) : null}
@@ -93,7 +93,7 @@ export function SessionCard({
 
         {/* Content */}
         <CardContent className="p-4 !px-4">
-          <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">
+          <h3 className="line-clamp-1 text-lg font-semibold transition-colors group-hover:text-primary">
             {activity.name}
           </h3>
 
@@ -115,7 +115,7 @@ export function SessionCard({
           </div>
 
           {/* Date/Time */}
-          <div className="mt-4 pt-3 border-t flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between border-t pt-3">
             <div className="text-sm font-semibold text-primary">
               {format(startDate, "EEE, MMM d")}
             </div>
@@ -128,3 +128,4 @@ export function SessionCard({
     </Link>
   );
 }
+

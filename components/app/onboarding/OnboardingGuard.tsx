@@ -37,3 +37,4 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
 
   return <>{children}</>;
 }
+

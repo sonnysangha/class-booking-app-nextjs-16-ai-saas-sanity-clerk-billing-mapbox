@@ -6,12 +6,8 @@ import { redirect } from "next/navigation";
 import { client } from "@/sanity/lib/client";
 import { writeClient } from "@/sanity/lib/writeClient";
 import { sanityFetch } from "@/sanity/lib/live";
-
-const USER_PROFILE_BY_CLERK_ID_QUERY = `*[_type == "userProfile" && clerkId == $clerkId][0]{
-  _id,
-  location,
-  searchRadius
-}`;
+import { USER_PROFILE_WITH_PREFERENCES_QUERY } from "@/sanity/lib/queries/bookings";
+import { getOrCreateUserProfile } from "@/lib/utils/user-profile";
 
 export type ProfileResult = {
   success: boolean;
@@ -29,35 +25,6 @@ export type ProfilePreferences = {
   location: LocationData;
   searchRadius: number;
 };
-
-// Get or create user profile and return its ID
-async function getOrCreateUserProfile(clerkUserId: string): Promise<string> {
-  const existingProfile = await client.fetch(USER_PROFILE_BY_CLERK_ID_QUERY, {
-    clerkId: clerkUserId,
-  });
-
-  if (existingProfile) {
-    return existingProfile._id;
-  }
-
-  // Fetch user details from Clerk
-  const clerk = await clerkClient();
-  const clerkUser = await clerk.users.getUser(clerkUserId);
-
-  // Create new user profile
-  const newProfile = await writeClient.create({
-    _type: "userProfile",
-    clerkId: clerkUserId,
-    email: clerkUser.emailAddresses[0]?.emailAddress,
-    firstName: clerkUser.firstName,
-    lastName: clerkUser.lastName,
-    imageUrl: clerkUser.imageUrl,
-    subscriptionTier: "none",
-    createdAt: new Date().toISOString(),
-  });
-
-  return newProfile._id;
-}
 
 // Complete onboarding - save preferences and set Clerk metadata
 export async function completeOnboarding(
@@ -137,9 +104,12 @@ export async function updateLocationPreferences(
     }
 
     // Get user profile
-    const userProfile = await client.fetch(USER_PROFILE_BY_CLERK_ID_QUERY, {
-      clerkId: userId,
-    });
+    const userProfile = await client.fetch(
+      USER_PROFILE_WITH_PREFERENCES_QUERY,
+      {
+        clerkId: userId,
+      }
+    );
 
     if (!userProfile) {
       return { success: false, error: "User profile not found" };
@@ -179,7 +149,7 @@ export async function getUserPreferences(): Promise<ProfilePreferences | null> {
     }
 
     const userProfile = await sanityFetch({
-      query: USER_PROFILE_BY_CLERK_ID_QUERY,
+      query: USER_PROFILE_WITH_PREFERENCES_QUERY,
       params: { clerkId: userId },
     });
 

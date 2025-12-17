@@ -49,8 +49,8 @@ export function AddressSearch({
     try {
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          searchQuery,
-        )}.json?access_token=${token}&types=address,place,locality,neighborhood`,
+          searchQuery
+        )}.json?access_token=${token}&types=address,place,locality,neighborhood`
       );
       const data = await response.json();
       setSuggestions(data.features || []);
@@ -127,7 +127,7 @@ export function AddressSearch({
               key={suggestion.place_name}
               type="button"
               onClick={() => handleSelect(suggestion)}
-              className="flex w-full items-start gap-3 px-4 py-3 text-left text-sm hover:bg-accent first:rounded-t-lg last:rounded-b-lg"
+              className="flex w-full items-start gap-3 px-4 py-3 text-left text-sm first:rounded-t-lg last:rounded-b-lg hover:bg-accent"
             >
               <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="line-clamp-2">{suggestion.place_name}</span>
@@ -153,3 +153,4 @@ export function AddressSearch({
     </div>
   );
 }
+

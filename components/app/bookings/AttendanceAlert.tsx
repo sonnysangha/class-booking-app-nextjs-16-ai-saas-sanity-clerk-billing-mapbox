@@ -55,12 +55,12 @@ export function AttendanceAlert({ bookings }: AttendanceAlertProps) {
         // Calculate progress (from class start to attendance window end)
         const totalWindowMinutes = differenceInMinutes(
           attendanceWindowEnd,
-          classStart,
+          classStart
         );
         const elapsedMinutes = differenceInMinutes(now, classStart);
         const progressPercent = Math.min(
           100,
-          (elapsedMinutes / totalWindowMinutes) * 100,
+          (elapsedMinutes / totalWindowMinutes) * 100
         );
 
         return (
@@ -112,7 +112,7 @@ export function AttendanceAlert({ bookings }: AttendanceAlertProps) {
                         formatter={(
                           value: number,
                           unit: string,
-                          suffix: string,
+                          suffix: string
                         ) =>
                           suffix === "ago"
                             ? "Expired"
@@ -185,3 +185,4 @@ export function AttendanceAlert({ bookings }: AttendanceAlertProps) {
     </div>
   );
 }
+

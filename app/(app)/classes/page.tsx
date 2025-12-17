@@ -10,10 +10,10 @@ import {
 import { CATEGORIES_QUERY } from "@/sanity/lib/queries/categories";
 import { VENUE_NAME_BY_ID_QUERY } from "@/sanity/lib/queries/venues";
 import { USER_BOOKED_SESSION_IDS_QUERY } from "@/sanity/lib/queries";
-import { ClassesContent } from "@/components/app/ClassesContent";
-import { ClassesMapSidebar } from "@/components/app/ClassesMapSidebar";
-import { ClassSearch } from "@/components/app/ClassSearch";
-import { ClassesFilters } from "@/components/app/ClassesFilters";
+import { ClassesContent } from "@/components/app/classes/ClassesContent";
+import { ClassesMapSidebar } from "@/components/app/maps/ClassesMapSidebar";
+import { ClassSearch } from "@/components/app/classes/ClassSearch";
+import { ClassesFilters } from "@/components/app/classes/ClassesFilters";
 import { getUserPreferences } from "@/lib/actions/profile";
 import { filterSessionsByDistance, getBoundingBox } from "@/lib/utils/distance";
 import Link from "next/link";

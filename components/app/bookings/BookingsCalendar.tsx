@@ -41,7 +41,7 @@ export function BookingsCalendar({
       acc[dateKey].push(booking);
       return acc;
     },
-    {} as Record<string, Booking[]>,
+    {} as Record<string, Booking[]>
   );
 
   // Check if a date has bookings
@@ -89,10 +89,10 @@ export function BookingsCalendar({
                   "relative flex size-(--cell-size) flex-col items-center justify-center rounded-lg text-sm font-medium transition-all hover:bg-accent",
                   isToday &&
                     !isSelected &&
-                    "bg-accent text-accent-foreground font-bold",
+                    "bg-accent font-bold text-accent-foreground",
                   modifiers.outside && "text-muted-foreground opacity-50",
                   isSelected &&
-                    "bg-violet-600! text-white! ring-2 ring-violet-600 ring-offset-2 hover:bg-violet-700!",
+                    "bg-violet-600! text-white! ring-2 ring-violet-600 ring-offset-2 hover:bg-violet-700!"
                 )}
               >
                 <span>{day.date.getDate()}</span>
@@ -105,7 +105,7 @@ export function BookingsCalendar({
                         key={`dot-${day.date.getTime()}-${i}`}
                         className={cn(
                           "size-1 rounded-full",
-                          isSelected ? "bg-white" : "bg-violet-500",
+                          isSelected ? "bg-white" : "bg-violet-500"
                         )}
                       />
                     ))}
@@ -135,3 +135,4 @@ export function BookingsCalendar({
     </div>
   );
 }
+

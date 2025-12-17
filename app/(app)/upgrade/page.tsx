@@ -7,7 +7,7 @@ import {
   RefreshCw,
   Building2,
 } from "lucide-react";
-import { TIER_DISPLAY_NAMES } from "@/lib/constants";
+import { TIER_DISPLAY_NAMES } from "@/lib/constants/subscription";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 

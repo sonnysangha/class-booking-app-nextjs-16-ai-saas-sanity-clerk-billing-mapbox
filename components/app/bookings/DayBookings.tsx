@@ -77,7 +77,7 @@ export function DayBookings({ bookings, selectedDate }: DayBookingsProps) {
           const effectiveStatus = getEffectiveStatus(
             booking.status || "confirmed",
             startTime,
-            duration,
+            duration
           );
 
           return (
@@ -136,3 +136,4 @@ export function DayBookings({ bookings, selectedDate }: DayBookingsProps) {
     </div>
   );
 }
+

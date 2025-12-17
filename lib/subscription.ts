@@ -7,7 +7,7 @@ import {
   TIER_HIERARCHY,
   TIER_LIMITS,
   TIER_PRICING,
-} from "@/lib/constants";
+} from "@/lib/constants/subscription";
 
 // Re-export type and pricing for backwards compatibility
 export type { Tier };
