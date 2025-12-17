@@ -64,7 +64,7 @@ export default function AdminDashboard() {
         {sections.map((section) => {
           const Icon = section.icon;
           return (
-            <Link key={section.href} href={section.href}>
+            <Link key={section.documentType} href={section.href}>
               <Card className="group h-full transition-all hover:border-primary hover:shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSanityClient } from "@/lib/hooks/useSanityClient";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,13 +34,14 @@ export function CreateActivityDialog() {
   });
 
   const client = useSanityClient();
+  const router = useRouter();
 
   const handleCreate = async () => {
     if (!formData.name.trim()) return;
 
     setIsCreating(true);
     try {
-      await client.create({
+      const newActivity = await client.create({
         _type: "activity",
         name: formData.name,
         instructor: formData.instructor,
@@ -53,6 +55,8 @@ export function CreateActivityDialog() {
         tierLevel: "basic",
       });
       setOpen(false);
+      // Navigate to the new activity's detail page
+      router.push(`/admin/activities/${newActivity._id}`);
     } catch (error) {
       console.error("Failed to create activity:", error);
     } finally {

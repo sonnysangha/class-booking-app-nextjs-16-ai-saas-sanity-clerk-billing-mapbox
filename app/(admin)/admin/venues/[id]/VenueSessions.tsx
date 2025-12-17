@@ -22,7 +22,7 @@ interface VenueSessionsProps {
 }
 
 export function VenueSessions({ venueId }: VenueSessionsProps) {
-  const { data: sessions, isLoading } = useQuery<SessionAtVenue[]>({
+  const { data: sessions, isPending } = useQuery<SessionAtVenue[]>({
     query: `*[_type == "classSession" && venue._ref == $venueId] | order(startTime asc) {
       _id,
       startTime,
@@ -35,7 +35,7 @@ export function VenueSessions({ venueId }: VenueSessionsProps) {
     params: { venueId },
   });
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="space-y-2">
         <Skeleton className="h-16 w-full" />
@@ -78,17 +78,17 @@ export function VenueSessions({ venueId }: VenueSessionsProps) {
         tierLevel?: string;
         sessions: SessionAtVenue[];
       }
-    >
+    >,
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 -mt-4">
       {Object.values(sessionsByActivity).map((group) => (
         <Link
           key={group.activityId}
           href={`/admin/activities/${group.activityId}`}
         >
-          <Card className="group transition-all hover:border-primary hover:shadow-md">
+          <Card className="group transition-all hover:border-primary hover:shadow-md mt-4">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -105,7 +105,7 @@ export function VenueSessions({ venueId }: VenueSessionsProps) {
                   <ChevronRight className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-3">
                 {group.sessions.slice(0, 3).map((session) => {
                   const startDate = session.startTime
                     ? new Date(session.startTime)
@@ -146,4 +146,3 @@ export function VenueSessions({ venueId }: VenueSessionsProps) {
     </div>
   );
 }
-

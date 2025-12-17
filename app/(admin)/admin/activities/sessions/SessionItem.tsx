@@ -2,7 +2,14 @@
 
 import { Suspense, useState } from "react";
 import { useSanityClient } from "@/lib/hooks/useSanityClient";
-import { Calendar, Clock, Users, Trash2, ChevronUp, Pencil } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Users,
+  Trash2,
+  ChevronUp,
+  Pencil,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -54,12 +61,12 @@ export function SessionItem({
     <div
       className={`rounded-lg border transition-all ${isExpanded ? "bg-muted/30" : ""} ${isPast ? "opacity-70" : ""}`}
     >
-      <button
-        type="button"
-        className="flex w-full items-center justify-between p-3 text-left"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex flex-wrap items-center gap-3 text-sm">
+      <div className="flex w-full items-center justify-between p-3">
+        <button
+          type="button"
+          className="flex flex-1 flex-wrap items-center gap-3 text-sm text-left"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
           {startDate && (
             <>
               <span className="flex items-center gap-1 text-muted-foreground">
@@ -87,21 +94,20 @@ export function SessionItem({
             <span className="text-muted-foreground">@ {session.venueName}</span>
           )}
           <Badge
-            className={SESSION_STATUS_COLORS[displayStatus || "scheduled"] || ""}
+            className={
+              SESSION_STATUS_COLORS[displayStatus || "scheduled"] || ""
+            }
             variant="secondary"
           >
             {displayStatus || "scheduled"}
           </Badge>
-        </div>
+        </button>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
+            onClick={() => setIsExpanded(!isExpanded)}
           >
             {isExpanded ? (
               <ChevronUp className="h-4 w-4" />
@@ -113,15 +119,12 @@ export function SessionItem({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-destructive hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete();
-            }}
+            onClick={handleDelete}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-      </button>
+      </div>
 
       {isExpanded && (
         <div className="px-3 pb-3">
@@ -139,4 +142,3 @@ export function SessionItem({
     </div>
   );
 }
-
