@@ -1,4 +1,23 @@
 /**
+ * Session status options for admin forms.
+ */
+export const SESSION_STATUS_OPTIONS = [
+  { value: "scheduled", label: "Scheduled" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "completed", label: "Completed" },
+] as const;
+
+/**
+ * Session status colors for badges.
+ */
+export const SESSION_STATUS_COLORS: Record<string, string> = {
+  scheduled:
+    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  completed: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+};
+
+/**
  * Status colors for booking status badges.
  * Centralized for consistent styling across the app.
  */

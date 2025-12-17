@@ -1,18 +1,61 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MapPinIcon, SearchIcon, LoaderIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 
-interface AddressResult {
+export interface AddressResult {
   lat: number;
   lng: number;
   address: string;
+  street?: string;
+  city?: string;
+  postcode?: string;
+  country?: string;
+}
+
+interface MapboxContext {
+  id: string;
+  text: string;
 }
 
 interface MapboxFeature {
   place_name: string;
   center: [number, number]; // [lng, lat]
+  text?: string;
+  address?: string;
+  context?: MapboxContext[];
+}
+
+function extractAddressComponents(feature: MapboxFeature) {
+  const context = feature.context || [];
+  let street = "";
+  let city = "";
+  let postcode = "";
+  let country = "";
+
+  // Build street from address number and street name
+  if (feature.address && feature.text) {
+    street = `${feature.address} ${feature.text}`;
+  } else if (feature.text) {
+    street = feature.text;
+  }
+
+  // Extract components from context
+  for (const item of context) {
+    if (item.id.startsWith("place")) {
+      city = item.text;
+    } else if (item.id.startsWith("locality")) {
+      city = city || item.text;
+    } else if (item.id.startsWith("postcode")) {
+      postcode = item.text;
+    } else if (item.id.startsWith("country")) {
+      country = item.text;
+    }
+  }
+
+  return { street, city, postcode, country };
 }
 
 interface AddressSearchProps {
@@ -32,6 +75,8 @@ export function AddressSearch({
   const [suggestions, setSuggestions] = useState<MapboxFeature[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+
+  const debouncedQuery = useDebounce(query, 300);
 
   const searchAddress = useCallback(async (searchQuery: string) => {
     if (searchQuery.length < 3) {
@@ -62,24 +107,23 @@ export function AddressSearch({
     }
   }, []);
 
+  // Trigger search when debounced query changes
+  useEffect(() => {
+    searchAddress(debouncedQuery);
+  }, [debouncedQuery, searchAddress]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newQuery = e.target.value;
-    setQuery(newQuery);
-
-    // Debounce search
-    const timeoutId = setTimeout(() => {
-      searchAddress(newQuery);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
+    setQuery(e.target.value);
   };
 
   const handleSelect = (feature: MapboxFeature) => {
     const [lng, lat] = feature.center;
+    const components = extractAddressComponents(feature);
     onChange({
       lat,
       lng,
       address: feature.place_name,
+      ...components,
     });
     setQuery(feature.place_name);
     setSuggestions([]);
@@ -91,6 +135,8 @@ export function AddressSearch({
     setQuery("");
     setSuggestions([]);
   };
+
+  const isSearching = query !== debouncedQuery;
 
   return (
     <div className={cn("relative", className)}>
@@ -105,10 +151,10 @@ export function AddressSearch({
           placeholder={placeholder}
           className="w-full rounded-lg border border-input bg-background py-3 pl-10 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         />
-        {isLoading && (
+        {(isLoading || isSearching) && (
           <LoaderIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         )}
-        {!isLoading && value && (
+        {!isLoading && !isSearching && value && (
           <button
             type="button"
             onClick={handleClear}
@@ -153,4 +199,3 @@ export function AddressSearch({
     </div>
   );
 }
-

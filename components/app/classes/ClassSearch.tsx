@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SearchIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 
 interface ClassSearchProps {
   className?: string;
@@ -24,9 +25,10 @@ export function ClassSearch({
   const initialQuery = searchParams.get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
+  const debouncedQuery = useDebounce(query, 300);
   const isFirstRender = useRef(true);
 
-  // Update URL when query changes (debounced)
+  // Update URL when debounced query changes
   useEffect(() => {
     // Skip the first render to avoid unnecessary navigation
     if (isFirstRender.current) {
@@ -34,26 +36,22 @@ export function ClassSearch({
       return;
     }
 
-    const timer = setTimeout(() => {
-      const currentQ = searchParams.get("q") || "";
+    const currentQ = searchParams.get("q") || "";
 
-      // Only navigate if the query actually changed
-      if (query === currentQ) return;
+    // Only navigate if the query actually changed
+    if (debouncedQuery === currentQ) return;
 
-      const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams.toString());
 
-      if (query) {
-        params.set("q", query);
-      } else {
-        params.delete("q");
-      }
+    if (debouncedQuery) {
+      params.set("q", debouncedQuery);
+    } else {
+      params.delete("q");
+    }
 
-      const newUrl = params.toString() ? `?${params.toString()}` : "";
-      router.push(`/classes${newUrl}`, { scroll: false });
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [query, router, searchParams]);
+    const newUrl = params.toString() ? `?${params.toString()}` : "";
+    router.push(`/classes${newUrl}`, { scroll: false });
+  }, [debouncedQuery, router, searchParams]);
 
   const handleClear = useCallback(() => {
     setQuery("");
@@ -81,4 +79,3 @@ export function ClassSearch({
     </div>
   );
 }
-
