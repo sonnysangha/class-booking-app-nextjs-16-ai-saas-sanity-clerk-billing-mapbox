@@ -12,9 +12,10 @@ import {
 import { defineQuery } from "next-sanity";
 
 // Search for classes by name, category, or instructor
+// IMPORTANT: Only returns classes that have at least one future session scheduled
 export const searchClasses = tool({
   description:
-    "Search for fitness classes by name, category, instructor, or tier level. Use this to help users find classes they're interested in.",
+    "Search for fitness classes by name, category, instructor, or tier level. Only returns classes with upcoming sessions available. Use this to help users find classes they're interested in.",
   inputSchema: z.object({
     query: z
       .string()
@@ -31,7 +32,8 @@ export const searchClasses = tool({
       .describe("Tier level filter"),
   }),
   execute: async ({ query, category, instructor, tierLevel }) => {
-    let filter = `_type == "activity"`;
+    // Base filter: must be an activity AND have at least one future scheduled session
+    let filter = `_type == "activity" && count(*[_type == "classSession" && activity._ref == ^._id && startTime > now() && status == "scheduled"]) > 0`;
 
     if (query) {
       filter += ` && (name match "*${query}*" || instructor match "*${query}*")`;
@@ -223,9 +225,10 @@ export const getSubscriptionInfo = tool({
 });
 
 // Get class recommendations based on preferences
+// IMPORTANT: Only returns classes that have at least one future session scheduled
 export const getRecommendations = tool({
   description:
-    "Get personalized class recommendations based on user preferences like fitness goals, preferred time of day, or difficulty level.",
+    "Get personalized class recommendations based on user preferences like fitness goals, preferred time of day, or difficulty level. Only returns classes with upcoming sessions available.",
   inputSchema: z.object({
     fitnessGoal: z
       .enum(["strength", "flexibility", "cardio", "relaxation", "weight-loss"])
@@ -250,7 +253,8 @@ export const getRecommendations = tool({
       "weight-loss": ["HIIT", "Cycling", "Boot Camp"],
     };
 
-    let filter = `_type == "activity"`;
+    // Base filter: must be an activity AND have at least one future scheduled session
+    let filter = `_type == "activity" && count(*[_type == "classSession" && activity._ref == ^._id && startTime > now() && status == "scheduled"]) > 0`;
 
     if (tierLevel) {
       // Filter based on tier access
@@ -369,6 +373,7 @@ export const getUserBookings = tool({
           };
         }) => ({
           id: b._id,
+          sessionId: b.classSession?._id,
           status: b.status,
           bookedAt: b.createdAt,
           attendedAt: b.attendedAt,

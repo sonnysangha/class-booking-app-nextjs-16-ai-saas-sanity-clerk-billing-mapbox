@@ -47,6 +47,7 @@ export interface ClassSession {
 
 export interface UserBooking {
   id: string;
+  sessionId?: string;
   status: string;
   bookedAt?: string;
   attendedAt?: string;
@@ -133,8 +134,11 @@ function ClassCard({
   data: SearchClass;
   onClick: () => void;
 }) {
+  // Link to classes page with search query to show sessions for this activity
+  const searchParams = new URLSearchParams({ q: data.name });
+  
   return (
-    <Link href="/classes" onClick={onClick} className={cardClasses}>
+    <Link href={`/classes?${searchParams.toString()}`} onClick={onClick} className={cardClasses}>
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors duration-200 group-hover:bg-primary/20">
         <Dumbbell className="h-5 w-5 text-primary" />
       </div>
@@ -259,10 +263,13 @@ function BookingCard({
   const StatusIcon = status.icon;
   const startDate = data.dateTime ? new Date(data.dateTime) : null;
   const isPast = startDate && startDate < new Date();
+  
+  // Link to the session page if we have sessionId, otherwise bookings page
+  const href = data.sessionId ? `/classes/${data.sessionId}` : "/bookings";
 
   return (
     <Link
-      href="/bookings"
+      href={href}
       onClick={onClick}
       className={`${cardClasses} ${isPast ? "opacity-70" : ""}`}
     >

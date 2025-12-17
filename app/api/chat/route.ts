@@ -31,6 +31,21 @@ export async function POST(request: Request) {
     ? `- Subscription: ${tier} tier`
     : "- Subscription: No active subscription";
 
+  // Get current date/time for accurate "today" / "tomorrow" handling
+  const now = new Date();
+  const dateTimeContext = `- Current date: ${now.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })}
+- Current time: ${now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  })}
+- Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+
   // Inject user context as a system message
   const enhancedMessages = [
     {
@@ -39,12 +54,16 @@ export async function POST(request: Request) {
       parts: [
         {
           type: "text" as const,
-          text: `Current user context:
+          text: `Current date and time:
+${dateTimeContext}
+
+Current user context:
 - Clerk ID: ${clerkId}
 ${tierContext}
 ${locationContext}
 
 Guidelines:
+- Use the current date/time above to accurately determine "today", "tomorrow", etc. when discussing sessions.
 - When searching for classes or venues, consider the user's location and radius.
 - When the user asks about their bookings, use the getUserBookings tool with their clerkId (${clerkId}).
 - Personalize recommendations based on their subscription tier (${
