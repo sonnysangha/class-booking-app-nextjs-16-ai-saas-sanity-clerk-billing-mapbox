@@ -5,6 +5,7 @@ import { ChatStoreProvider } from "@/lib/store/chat-store-provider";
 import { AppShell } from "@/components/app/layout/AppShell";
 import { ChatSheet } from "@/components/app/chat/ChatSheet";
 import { ChatButton } from "@/components/app/chat/ChatButton";
+import { SanityLive } from "@/sanity/lib/live";
 
 export default function AppLayout({
   children,
@@ -22,6 +23,7 @@ export default function AppLayout({
         </AppShell>
         <ChatButton />
         <ChatSheet />
+        <SanityLive />
       </ChatStoreProvider>
     </ClerkProvider>
   );
