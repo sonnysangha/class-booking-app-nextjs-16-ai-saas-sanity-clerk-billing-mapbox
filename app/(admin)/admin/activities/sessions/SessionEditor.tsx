@@ -1,7 +1,11 @@
 "use client";
 
 import { Suspense } from "react";
-import { useDocument, useEditDocument } from "@sanity/sdk-react";
+import {
+  useDocument,
+  useEditDocument,
+  type DocumentHandle,
+} from "@sanity/sdk-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,8 +26,8 @@ interface SessionEditorProps {
 }
 
 export function SessionEditor({ sessionId }: SessionEditorProps) {
-  const handle = {
-    documentType: "classSession" as const,
+  const handle: DocumentHandle = {
+    documentType: "classSession",
     documentId: sessionId,
   };
 

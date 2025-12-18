@@ -1,6 +1,10 @@
 "use client";
 
-import { useDocument, useEditDocument } from "@sanity/sdk-react";
+import {
+  useDocument,
+  useEditDocument,
+  type DocumentHandle,
+} from "@sanity/sdk-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,23 +16,16 @@ import {
   type AddressResult,
 } from "@/components/app/maps/AddressSearch";
 import { VenueSessions } from "./VenueSessions";
+import type { Venue } from "@/sanity.types";
 
-interface VenueAddress {
-  fullAddress?: string;
-  street?: string;
-  city?: string;
-  postcode?: string;
-  country?: string;
-  lat?: number;
-  lng?: number;
-}
+type VenueAddress = Venue["address"];
 
 interface VenueDetailsProps {
   documentId: string;
 }
 
 export function VenueDetails({ documentId }: VenueDetailsProps) {
-  const handle = { documentType: "venue" as const, documentId };
+  const handle: DocumentHandle = { documentType: "venue", documentId };
 
   const { data: name } = useDocument({ ...handle, path: "name" });
   const { data: description } = useDocument({ ...handle, path: "description" });
@@ -80,7 +77,7 @@ export function VenueDetails({ documentId }: VenueDetailsProps) {
             <Label htmlFor="name">Name</Label>
             <Input
               id="name"
-              value={(name as string) ?? ""}
+              value={typeof name === "string" ? name : ""}
               onChange={(e) => editName(e.target.value)}
               placeholder="Venue name"
             />
@@ -89,7 +86,7 @@ export function VenueDetails({ documentId }: VenueDetailsProps) {
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              value={(description as string) ?? ""}
+              value={typeof description === "string" ? description : ""}
               onChange={(e) => editDescription(e.target.value)}
               placeholder="Brief description of the venue"
               rows={4}

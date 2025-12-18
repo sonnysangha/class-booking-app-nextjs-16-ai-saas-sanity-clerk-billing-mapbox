@@ -1,6 +1,10 @@
 "use client";
 
-import { useDocument, useEditDocument } from "@sanity/sdk-react";
+import {
+  useDocument,
+  useEditDocument,
+  type DocumentHandle,
+} from "@sanity/sdk-react";
 import { ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +44,7 @@ interface ActivityDetailsProps {
 }
 
 export function ActivityDetails({ documentId }: ActivityDetailsProps) {
-  const handle = { documentType: "activity" as const, documentId };
+  const handle: DocumentHandle = { documentType: "activity", documentId };
 
   const { data: name } = useDocument({ ...handle, path: "name" });
   const { data: instructor } = useDocument({ ...handle, path: "instructor" });
@@ -183,4 +187,3 @@ export function ActivityDetails({ documentId }: ActivityDetailsProps) {
     </div>
   );
 }
-
